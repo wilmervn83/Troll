@@ -28,10 +28,20 @@
             background-color: #f0fff0; /* Default background */
             font-family: 'Press Start 2P', cursive;
             height: 100%;
+            width: 100%;
             transition: background-color 2s; /* Smooth transition for biome change */
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
         }
         canvas {
             display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
         .screen {
             position: absolute;
@@ -161,6 +171,13 @@
             #keyboard-tutorial { display: none; }
             #touch-tutorial { display: block; }
         }
+        @media (max-width: 480px) {
+            #thought-bubble-overlay {
+                width: 120px;
+                padding: 8px;
+                font-size: 10px;
+            }
+        }
         @media (max-width: 400px) {
             #ui-container { font-size: 14px; } .ui-element img { width: 40px; height: 40px; } #troll-logo-container span { font-size: 16px; } .screen { padding: 15px; }
         }
@@ -170,12 +187,14 @@
     </style>
 </head>
 <body>
+    <div id="game-container">
+        <img id="trollface-head-overlay" class="game-overlay hidden" src="images/troll1.png">
+        <div id="thought-bubble-overlay" class="game-overlay hidden"></div>
+    </div>
+
     <div id="troll-laugh-overlay" class="hidden"> <img src="images/troll.png" alt="Trolling"> </div>
     <div id="biome-modal" class="hidden"> EAT THE DIP </div>
     
-    <img id="trollface-head-overlay" class="game-overlay hidden" src="images/troll1.png">
-    <div id="thought-bubble-overlay" class="game-overlay hidden"></div>
-
     <div id="troll-logo-container"> <span>$TROLL</span> <img src="images/troll.png" alt="Troll Logo"> </div>
     <div id="start-screen" class="screen"> <h1>Trollface Adventure</h1> <img src="images/troll.png" alt="Trollface" width="150" style="background: white; border-radius: 10px;"> <p>The Final Challenge!</p> <button onclick="showCharacterSelection()">Play</button> <button onclick="showMarketCapModal()">MKT Cap</button> <button onclick="window.close()">Exit</button> </div>
     <div id="character-selection" class="screen hidden"> <h2>Choose your Troll</h2> <button onclick="startGame('classic')">Classic</button> <button onclick="startGame('$Troll')">Laser Eyes</button> <button onclick="startGame('sunglasses')">Sunglasses</button> </div>
@@ -191,7 +210,7 @@
         // --- GAME CONFIG ---
         const CONFIG = {
             startSpeed: 0.12, maxSpeed: 0.25, speedUpFactor: 0.00001, 
-            jumpHeight: 2.5, // FIX: Proportional jump height
+            jumpHeight: 2.5,
             jumpDuration: Math.PI, slideDuration: 15, lanes: [-1.8, 0, 1.8], invincibilityDuration: 5000,
             speedBoostDuration: 5000, speedBoostFactor: 1.5, 
             cameraBaseFov: 70, cameraBoostFov: 85, 
@@ -206,7 +225,8 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.body.appendChild(renderer.domElement);
+        const gameContainer = document.getElementById('game-container');
+        gameContainer.appendChild(renderer.domElement);
         const clock = new THREE.Clock();
 
         // --- SCENE & BIOMES ---
@@ -231,9 +251,9 @@
             sunglasses: 'images/troll_sunglasses.png',
         };
         const loadingManager = new THREE.LoadingManager();
-        const textureLoader = new THREE.TextureLoader(loadingManager); // This loader is tracked by the manager
+        const textureLoader = new THREE.TextureLoader(loadingManager);
         let trollTextures = {};
-        const coinTexture = textureLoader.load('images/Coin.png'); // Correctly load texture
+        const coinTexture = textureLoader.load('images/Coin.png');
         const coinMaterial = new THREE.MeshBasicMaterial({ map: coinTexture, transparent: true });
         
         const headOverlay = document.getElementById('trollface-head-overlay');
@@ -262,7 +282,7 @@
             });
         }
 
-        // --- AUDIO SYSTEM & GAME VARIABLES --- (unchanged)
+        // --- AUDIO SYSTEM & GAME VARIABLES ---
         const sounds = { jump: new Audio('images/troll-laugh-sound-effect.mp3'), coin: new Audio('https://www.myinstants.com/media/sounds/coin.mp3'), powerup: new Audio('images/evil.mp3'), gameOver: new Audio('images/oh-no.mp3'), introMusic: new Audio('images/intro_Troll.mp3'), gameMusic: new Audio('images/trololo.mp3') };
         sounds.introMusic.loop = true; sounds.gameMusic.loop = true;
         Object.values(sounds).forEach(sound => sound.volume = 0.5);
@@ -312,6 +332,9 @@
             isDipZoneActive = false; gameSpeed = CONFIG.startSpeed; lastZ = -25;
             [...obstacles, ...powerUps, ...scenery].forEach(obj => scene.remove(obj));
             obstacles = []; powerUps = []; scenery = [];
+            
+            ui.coinIcon.style.transform = 'scale(1)';
+
             if (hero) {
                 hero.position.set(0, 0, 0);
                 hero.rotation.y = Math.PI;
@@ -319,7 +342,6 @@
                 headOverlay.src = trollTextures.running;
                 if (mixer) mixer.setTime(0);
             }
-            // === FIX: Ensure head is visible on restart ===
             headOverlay.classList.remove('hidden');
             currentLane = 1;
             setBiome(BIOMES.normal);
@@ -339,7 +361,6 @@
             else { ui.highScore.innerText = `Best: ${highScore}`; }
             ui.finalScore.innerText = `MKT Cap: ${score}`;
             ui.gameOver.classList.remove('hidden');
-            // === FIX: Head stays visible on game over ===
             bubbleOverlay.classList.add('hidden');
         }
 
@@ -352,7 +373,6 @@
         function spawnNextChallenge() { const c = Math.random(); if (c < 0.5) createObstacle(); else if (c < 0.8) createPowerUp('coin'); else if (c < 0.88) createSequence(); else if (c < 0.94) createPowerUp(Math.random() < 0.5 ? 'shield' : 'speed'); else if (c < 0.98) createPowerUp('fake_powerup'); else createFakeWallChallenge(); }
         function createObstacle(type, lane, z, isFake) { const types = [{ type: 'rage', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, { type: 'forever-alone', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, { type: 'bar', geo: new THREE.CylinderGeometry(0.1, 0.1, 1.4, 8), y: 1.5, rotation: { x: 0, y: 0, z: Math.PI / 2 } }]; const data = type ? types.find(t => t.type === type) : types[Math.floor(Math.random() * types.length)]; const obs = new THREE.Mesh(data.geo, new THREE.MeshStandardMaterial({ color: currentBiome.obstacleColor })); if (data.rotation) obs.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z); const l = lane != null ? lane : Math.floor(Math.random() * 3); const fz = z == null ? lastZ - (10 + Math.random() * 8) : z; if (z == null) lastZ = fz; obs.position.set(CONFIG.lanes[l], data.y, fz); obs.castShadow = true; obs.userData = { type: data.type, isShifter: Math.random() < 0.15, hasShifted: false, isFake: isFake, targetX: obs.position.x }; scene.add(obs); obstacles.push(obs); }
         
-        // === FIX: Game crashing bug ===
         function createPowerUp(type = 'coin', forceLane = null, zPos = null) {
             let powerUp;
             let finalType = type;
@@ -360,7 +380,7 @@
             if(isFake) finalType = Math.random() < 0.5 ? 'shield' : 'speed';
 
             if (finalType === 'coin') {
-                powerUp = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), coinMaterial); // Use the correct material
+                powerUp = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), coinMaterial);
             } else { 
                 const colors = { shield: 0x00ff00, speed: 0xff00ff }; 
                 powerUp = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 0), new THREE.MeshStandardMaterial({ color: colors[finalType], emissive: colors[finalType] })); 
@@ -406,15 +426,22 @@
             }
             
             if (hero.userData.headBone) {
-                const headPosition = new THREE.Vector3();
-                hero.userData.headBone.getWorldPosition(headPosition);
-                headPosition.project(camera);
+                // === MODIFICATION START ===
+                // Only update overlay positions if the screen is not actively resizing.
+                if (!isResizing) {
+                    const headPosition = new THREE.Vector3();
+                    hero.userData.headBone.getWorldPosition(headPosition);
+                    headPosition.project(camera);
 
-                const x = (headPosition.x + 1) / 2 * window.innerWidth;
-                const y = -(headPosition.y - 1) / 2 * window.innerHeight;
+                    const x = (headPosition.x + 1) / 2 * window.innerWidth;
+                    const y = -(headPosition.y - 1) / 2 * window.innerHeight;
 
-                headOverlay.style.transform = `translate(-50%, -50%) translate(${x}px, ${y-20}px)`;
-                bubbleOverlay.style.transform = `translate(-50%, -100%) translate(${x}px, ${y - (window.innerHeight * 0.08)}px)`;
+                    if (isFinite(x) && isFinite(y)) {
+                        headOverlay.style.transform = `translate(-50%, -50%) translate(${x}px, ${y - (window.innerHeight * 0.028)}px)`;
+                        bubbleOverlay.style.transform = `translate(-50%, -100%) translate(${x}px, ${y - (window.innerHeight * 0.10)}px)`;
+                    }
+                }
+                // === MODIFICATION END ===
             }
 
             const heroBox = new THREE.Box3();
@@ -439,8 +466,37 @@
             renderer.render(scene, camera);
         }
 
-        // --- Coin animation & Utils --- (Unchanged)
-        function animateCoinCollection(coin3D) { const startPos = toScreenPosition(coin3D, camera); const ac = document.createElement('img'); ac.src = 'images/Coin.png'; ac.className = 'coin-animation'; ac.style.left = `${startPos.x}px`; ac.style.top = `${startPos.y}px`; document.body.appendChild(ac); const target = ui.coinIcon.getBoundingClientRect(); requestAnimationFrame(() => { ac.style.left = `${target.left + target.width / 2}px`; ac.style.top = `${target.top + target.height / 2}px`; ac.style.width = '60px'; ac.style.height = '60px'; ac.style.opacity = '0'; }); setTimeout(() => { if (ac.parentElement) document.body.removeChild(ac); coinsCollected++; score += 200; sounds.coin.currentTime = 0; sounds.coin.play(); ui.coinIcon.style.transform = 'scale(1.5)'; setTimeout(() => { ui.coinIcon.style.transform = 'scale(1)'; }, 100); }, 500); }
+        // --- Coin animation & Utils ---
+        function animateCoinCollection(coin3D) { 
+            if (isResizing) return; // Prevent coin animation during resize
+
+            const startPos = toScreenPosition(coin3D, camera); 
+            if (!isFinite(startPos.x) || !isFinite(startPos.y)) return;
+
+            const ac = document.createElement('img'); 
+            ac.src = 'images/Coin.png'; 
+            ac.className = 'coin-animation'; 
+            ac.style.left = `${startPos.x}px`; 
+            ac.style.top = `${startPos.y}px`; 
+            gameContainer.appendChild(ac); 
+            const target = ui.coinIcon.getBoundingClientRect(); 
+            requestAnimationFrame(() => { 
+                ac.style.left = `${target.left + target.width / 2}px`; 
+                ac.style.top = `${target.top + target.height / 2}px`; 
+                ac.style.width = '60px'; 
+                ac.style.height = '60px'; 
+                ac.style.opacity = '0'; 
+            }); 
+            setTimeout(() => { 
+                if (ac.parentElement) gameContainer.removeChild(ac); 
+                coinsCollected++; 
+                score += 200; 
+                sounds.coin.currentTime = 0; 
+                sounds.coin.play(); 
+                ui.coinIcon.style.transform = 'scale(1.5)'; 
+                setTimeout(() => { ui.coinIcon.style.transform = 'scale(1)'; }, 100); 
+            }, 500); 
+        }
         function toScreenPosition(obj, camera) { const vector = new THREE.Vector3(); obj.getWorldPosition(vector); vector.project(camera); vector.x = (vector.x + 1) / 2 * window.innerWidth; vector.y = -(vector.y - 1) / 2 * window.innerHeight; return vector; }
         
         // --- CONTROLS ---
@@ -472,7 +528,29 @@
         document.addEventListener('touchstart', (e) => { if (gameOver || !gameStarted) return; touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; }, { passive: true });
         document.addEventListener('touchend', (e) => { if (gameOver || !gameStarted) return; const touchEndX = e.changedTouches[0].screenX; const touchEndY = e.changedTouches[0].screenY; handleSwipe(touchEndX, touchEndY); const currentTime = new Date().getTime(); const tapLength = currentTime - lastTap; if (tapLength < 300 && tapLength > 0) handleTrollAction(); lastTap = currentTime; });
         function handleSwipe(x, y) { const dx = x - touchStartX; const dy = y - touchStartY; if (Math.abs(dx) > Math.abs(dy)) { if (Math.abs(dx) > swipeThreshold) (dx > 0) ? handleMoveRight() : handleMoveLeft(); } else { if (Math.abs(dy) > swipeThreshold) (dy > 0) ? handleSlide() : handleJump(); } }
-        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        
+        // === MODIFICATION START ===
+        let isResizing = false;
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            // Set a flag immediately when resizing starts
+            isResizing = true;
+            
+            // Clear any existing timeout to handle rapid resize events
+            clearTimeout(resizeTimeout);
+            
+            // Set a new timeout to run after resizing has stopped
+            resizeTimeout = setTimeout(() => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                
+                // Unset the flag once all resizing logic is complete
+                isResizing = false;
+            }, 150); // A 150ms delay is enough to wait for the orientation change to complete
+        });
+        // === MODIFICATION END ===
+
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').then(reg => console.log('SW registered.', reg)).catch(err => console.log('SW registration error:', err)); }); }
     </script>
 </body>
