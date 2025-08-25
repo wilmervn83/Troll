@@ -180,7 +180,7 @@
     <div id="start-screen" class="screen"> <h1>Trollface Adventure</h1> <img src="images/troll.png" alt="Trollface" width="150" style="background: white; border-radius: 10px;"> <p>The Final Challenge!</p> <button onclick="showCharacterSelection()">Play</button> <button onclick="showMarketCapModal()">MKT Cap</button> <button onclick="window.close()">Exit</button> </div>
     <div id="character-selection" class="screen hidden"> <h2>Choose your Troll</h2> <button onclick="startGame('classic')">Classic</button> <button onclick="startGame('$Troll')">Laser Eyes</button> <button onclick="startGame('sunglasses')">Sunglasses</button> </div>
     <div id="tutorial-screen" class="screen hidden"> <h2>Move or get trolled!</h2> <div id="keyboard-tutorial"> <p>Left/Right Arrows: Move</p> <p>Up Arrow: Jump</p> <p>Down Arrow: Slide</p> <p>Spacebar: Troll</p> </div> <div id="touch-tutorial"> <p>Swipe Left/Right: Move</p> <p>Swipe Up: Jump</p> <p>Swipe Down: Slide</p> <p>Double Tap: Troll</p> </div> <button onclick="startRunning()">Start!</button> </div>
-    <div id="ui-container"> <div class="ui-element"> <span id="score-text">MKT Cap: 0</span> </div> <div class="ui-element"> <img id="coin-icon" src="images/coin.png" alt="Coin"> <span id="coin-counter">0</span> </div> </div>
+    <div id="ui-container"> <div class="ui-element"> <span id="score-text">MKT Cap: 0</span> </div> <div class="ui-element"> <img id="coin-icon" src="images/Coin.png" alt="Coin"> <span id="coin-counter">0</span> </div> </div>
     <div id="game-over" class="screen hidden"> <h2>U Mad Bro?</h2> <p id="final-score">MKT Cap: 0</p> <p id="high-score">Best: 0</p> <button onclick="restartGame()">Restart</button> </div>
     <div id="market-cap-modal" class="screen hidden"> <h2 style="color: #ffff00;">Historical MKT Cap</h2> <p id="current-high-score">Loading...</p> <button onclick="closeMarketCapModal()">Close</button> </div>
 
@@ -233,7 +233,7 @@
         const loadingManager = new THREE.LoadingManager();
         const textureLoader = new THREE.TextureLoader(loadingManager); // This loader is tracked by the manager
         let trollTextures = {};
-        const coinTexture = textureLoader.load('c'); // Correctly load texture
+        const coinTexture = textureLoader.load('images/Coin.png'); // Correctly load texture
         const coinMaterial = new THREE.MeshBasicMaterial({ map: coinTexture, transparent: true });
         
         const headOverlay = document.getElementById('trollface-head-overlay');
@@ -440,7 +440,7 @@
         }
 
         // --- Coin animation & Utils --- (Unchanged)
-        function animateCoinCollection(coin3D) { const startPos = toScreenPosition(coin3D, camera); const ac = document.createElement('img'); ac.src = 'c'; ac.className = 'coin-animation'; ac.style.left = `${startPos.x}px`; ac.style.top = `${startPos.y}px`; document.body.appendChild(ac); const target = ui.coinIcon.getBoundingClientRect(); requestAnimationFrame(() => { ac.style.left = `${target.left + target.width / 2}px`; ac.style.top = `${target.top + target.height / 2}px`; ac.style.width = '60px'; ac.style.height = '60px'; ac.style.opacity = '0'; }); setTimeout(() => { if (ac.parentElement) document.body.removeChild(ac); coinsCollected++; score += 200; sounds.coin.currentTime = 0; sounds.coin.play(); ui.coinIcon.style.transform = 'scale(1.5)'; setTimeout(() => { ui.coinIcon.style.transform = 'scale(1)'; }, 100); }, 500); }
+        function animateCoinCollection(coin3D) { const startPos = toScreenPosition(coin3D, camera); const ac = document.createElement('img'); ac.src = 'images/Coin.png'; ac.className = 'coin-animation'; ac.style.left = `${startPos.x}px`; ac.style.top = `${startPos.y}px`; document.body.appendChild(ac); const target = ui.coinIcon.getBoundingClientRect(); requestAnimationFrame(() => { ac.style.left = `${target.left + target.width / 2}px`; ac.style.top = `${target.top + target.height / 2}px`; ac.style.width = '60px'; ac.style.height = '60px'; ac.style.opacity = '0'; }); setTimeout(() => { if (ac.parentElement) document.body.removeChild(ac); coinsCollected++; score += 200; sounds.coin.currentTime = 0; sounds.coin.play(); ui.coinIcon.style.transform = 'scale(1.5)'; setTimeout(() => { ui.coinIcon.style.transform = 'scale(1)'; }, 100); }, 500); }
         function toScreenPosition(obj, camera) { const vector = new THREE.Vector3(); obj.getWorldPosition(vector); vector.project(camera); vector.x = (vector.x + 1) / 2 * window.innerWidth; vector.y = -(vector.y - 1) / 2 * window.innerHeight; return vector; }
         
         // --- CONTROLS ---
