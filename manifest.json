@@ -2,7 +2,7 @@
   "name": "Trollface Adventure: EL RETO FINAL",
   "short_name": "Troll Adventure",
   "description": "Un juego de carrera infinita al estilo troll. ¡Esquiva los obstáculos o serás trolleado!",
-  "start_url": "indexgit add README.md.html",
+  "start_url": "https://github.com/wilmervn83/Troll",
   "display": "fullscreen",
   "background_color": "#f0fff0",
   "theme_color": "#228B22",
