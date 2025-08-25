@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Trollface Adventure: THE FINAL CHALLENGE</title>
+    
+    <!-- === META TAGS FOR PWA === -->
+    <meta name="theme-color" content="#228B22"/>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Troll Adventure">
+    <meta name="application-name" content="Troll Adventure">
+    <link rel="apple-touch-icon" href="images/icon-192x192.png">
+    
+    <!-- === LINK TO MANIFEST === -->
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* === GENERAL AND RESPONSIVE STYLES === */
+        html, body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0fff0; /* Default background */
+            font-family: 'Press Start 2P', cursive;
+            height: 100%;
+            transition: background-color 2s; /* Smooth transition for biome change */
+        }
+        canvas {
+            display: block;
+        }
+        .screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 20;
+            border: 4px solid #fff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            transition: opacity 0.5s, visibility 0.5s, transform 0.3s;
+            width: 90%;
+            max-width: 500px;
+        }
+        .screen h1 { font-size: 1.8em; color: #39FF14; text-shadow: 3px 3px 0 #000; }
+        .screen h2 { font-size: 1.5em; color: #ffff00; }
+        .screen p { font-size: 0.8em; }
+        .screen button {
+            margin: 8px;
+            padding: 12px 18px;
+            font-size: 14px;
+            cursor: pointer;
+            background-color: #ff5555; 
+            border: 2px solid #fff;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .screen button:hover { background-color: #ff7777; transform: scale(1.1); }
+        .screen button:disabled {
+            background-color: #888;
+            cursor: not-allowed;
+        }
+        #ui-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #39FF14; 
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0px black;
+            z-index: 10;
+        }
+        .ui-element { display: flex; align-items: center; margin-bottom: 8px; }
+        .ui-element img {
+            width: 50px;
+            height: 50px;
+            margin-right: 10px;
+            transition: transform 0.2s ease-out;
+        }
+        .hidden { display: none; visibility: hidden; opacity: 0; }
+        .shake { animation: shake 0.5s; }
+        .coin-animation {
+            position: absolute;
+            z-index: 100;
+            width: 30px;
+            height: 30px;
+            transition: top 0.5s cubic-bezier(0.5, -0.5, 1, 1), left 0.5s cubic-bezier(0, 0.5, 0.5, 1), width 0.5s ease-out, height 0.5s ease-out, opacity 0.5s ease-in;
+        }
+        #troll-logo-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            z-index: 10;
+        }
+        #troll-logo-container span { font-size: 22px; color: #228B22; text-shadow: 2px 2px 0px black; margin-right: 8px; }
+        #troll-logo-container img { width: 40px; height: 40px; background: white; border-radius: 5px; }
+        #touch-tutorial { display: none; }
+        
+        #troll-laugh-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 999; pointer-events: none; opacity: 0; transition: opacity 0.1s;
+        }
+        #troll-laugh-overlay img { width: 200px; height: 200px; animation: shake 0.5s infinite; }
+        #biome-modal {
+            position: absolute; top: 15%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 15px 30px; border-radius: 10px; border: 3px solid red; z-index: 100; font-size: 2em; color: red; text-shadow: 2px 2px #000;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            will-change: transform; 
+            pointer-events: none;
+            z-index: 15;
+            transition: opacity 0.2s;
+        }
+
+        #trollface-head-overlay {
+            width: 8vh;
+            height: 8vh;
+            max-width: 80px;
+            max-height: 80px;
+            transform-origin: center center;
+        }
+
+        #thought-bubble-overlay {
+            background-color: white;
+            border: 3px solid black;
+            border-radius: 15px;
+            padding: 10px;
+            width: 150px;
+            font-size: 12px;
+            text-align: center;
+            color: black;
+            line-height: 1.2;
+        }
+        #thought-bubble-overlay::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 15px 15px 0 15px;
+            border-style: solid;
+            border-color: white transparent transparent transparent;
+        }
+
+
+        @media (hover: none) and (pointer: coarse) {
+            #keyboard-tutorial { display: none; }
+            #touch-tutorial { display: block; }
+        }
+        @media (max-width: 400px) {
+            #ui-container { font-size: 14px; } .ui-element img { width: 40px; height: 40px; } #troll-logo-container span { font-size: 16px; } .screen { padding: 15px; }
+        }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(0, 0) rotate(0deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="troll-laugh-overlay" class="hidden"> <img src="images/troll.png" alt="Trolling"> </div>
+    <div id="biome-modal" class="hidden"> EAT THE DIP </div>
+    
+    <img id="trollface-head-overlay" class="game-overlay hidden" src="images/troll1.png">
+    <div id="thought-bubble-overlay" class="game-overlay hidden"></div>
+
+    <div id="troll-logo-container"> <span>$TROLL</span> <img src="images/troll.png" alt="Troll Logo"> </div>
+    <div id="start-screen" class="screen"> <h1>Trollface Adventure</h1> <img src="images/troll.png" alt="Trollface" width="150" style="background: white; border-radius: 10px;"> <p>The Final Challenge!</p> <button onclick="showCharacterSelection()">Play</button> <button onclick="showMarketCapModal()">MKT Cap</button> <button onclick="window.close()">Exit</button> </div>
+    <div id="character-selection" class="screen hidden"> <h2>Choose your Troll</h2> <button onclick="startGame('classic')">Classic</button> <button onclick="startGame('$Troll')">Laser Eyes</button> <button onclick="startGame('sunglasses')">Sunglasses</button> </div>
+    <div id="tutorial-screen" class="screen hidden"> <h2>Move or get trolled!</h2> <div id="keyboard-tutorial"> <p>Left/Right Arrows: Move</p> <p>Up Arrow: Jump</p> <p>Down Arrow: Slide</p> <p>Spacebar: Troll</p> </div> <div id="touch-tutorial"> <p>Swipe Left/Right: Move</p> <p>Swipe Up: Jump</p> <p>Swipe Down: Slide</p> <p>Double Tap: Troll</p> </div> <button onclick="startRunning()">Start!</button> </div>
+    <div id="ui-container"> <div class="ui-element"> <span id="score-text">MKT Cap: 0</span> </div> <div class="ui-element"> <img id="coin-icon" src="images/Coin.png" alt="Coin"> <span id="coin-counter">0</span> </div> </div>
+    <div id="game-over" class="screen hidden"> <h2>U Mad Bro?</h2> <p id="final-score">MKT Cap: 0</p> <p id="high-score">Best: 0</p> <button onclick="restartGame()">Restart</button> </div>
+    <div id="market-cap-modal" class="screen hidden"> <h2 style="color: #ffff00;">Historical MKT Cap</h2> <p id="current-high-score">Loading...</p> <button onclick="closeMarketCapModal()">Close</button> </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <script>
+        // --- GAME CONFIG ---
+        const CONFIG = {
+            startSpeed: 0.12, maxSpeed: 0.25, speedUpFactor: 0.00001, 
+            jumpHeight: 2.5, // FIX: Proportional jump height
+            jumpDuration: Math.PI, slideDuration: 15, lanes: [-1.8, 0, 1.8], invincibilityDuration: 5000,
+            speedBoostDuration: 5000, speedBoostFactor: 1.5, 
+            cameraBaseFov: 70, cameraBoostFov: 85, 
+        };
+        let gameSpeed = CONFIG.startSpeed;
+
+        // --- THREE.JS INITIALIZATION ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(CONFIG.cameraBaseFov, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2.5, 5);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+        const clock = new THREE.Clock();
+
+        // --- SCENE & BIOMES ---
+        scene.add(new THREE.HemisphereLight(0xfffafa, 0x000000, 0.9));
+        const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+        sun.position.set(2, 5, 3); sun.castShadow = true; scene.add(sun);
+        const BIOMES = {
+            normal: { groundColor: 0x228B22, obstacleColor: 0xff0000, sceneryColor: 0x00ff00, fogColor: 0x88ff88, bodyBg: '#f0fff0' },
+            dipZone: { groundColor: 0xff0000, obstacleColor: 0x00ff00, sceneryColor: 0x00ff00, fogColor: 0x100000, bodyBg: '#000000' }
+        };
+        let currentBiome = BIOMES.normal;
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(12, 1000), new THREE.MeshStandardMaterial({ color: currentBiome.groundColor }));
+        ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+        scene.fog = new THREE.FogExp2(currentBiome.fogColor, 0.015);
+
+        // --- HERO (TROLLFACE) ---
+        let hero;
+        let mixer;
+        const trollfaceURLs = {
+            classic: 'images/troll.png',
+            $Troll: 'images/$Troll.png',
+            sunglasses: 'images/troll_sunglasses.png',
+        };
+        const loadingManager = new THREE.LoadingManager();
+        const textureLoader = new THREE.TextureLoader(loadingManager); // This loader is tracked by the manager
+        let trollTextures = {};
+        const coinTexture = textureLoader.load('images/Coin.png'); // Correctly load texture
+        const coinMaterial = new THREE.MeshBasicMaterial({ map: coinTexture, transparent: true });
+        
+        const headOverlay = document.getElementById('trollface-head-overlay');
+        const bubbleOverlay = document.getElementById('thought-bubble-overlay');
+
+        function loadHero(character) {
+            trollTextures.running = 'images/troll1.png';
+            trollTextures.event = trollfaceURLs[character];
+
+            const loader = new THREE.GLTFLoader(loadingManager);
+            loader.load('images/Animation_Run_03_withSkin.glb', (gltf) => {
+                hero = gltf.scene;
+                hero.scale.set(1.2, 1.2, 1.2);
+                hero.rotation.y = Math.PI;
+                hero.position.y = 0;
+                hero.traverse((child) => { if (child.isMesh) { child.castShadow = true; } });
+                mixer = new THREE.AnimationMixer(hero);
+                if (gltf.animations.length) { mixer.clipAction(gltf.animations[0]).play(); }
+                
+                hero.userData.headBone = hero.getObjectByName('Head');
+                
+                hero.userData.shield = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.3 }));
+                hero.userData.shield.visible = false;
+                hero.add(hero.userData.shield);
+                scene.add(hero);
+            });
+        }
+
+        // --- AUDIO SYSTEM & GAME VARIABLES --- (unchanged)
+        const sounds = { jump: new Audio('images/troll-laugh-sound-effect.mp3'), coin: new Audio('https://www.myinstants.com/media/sounds/coin.mp3'), powerup: new Audio('images/evil.mp3'), gameOver: new Audio('images/oh-no.mp3'), introMusic: new Audio('images/intro_Troll.mp3'), gameMusic: new Audio('images/trololo.mp3') };
+        sounds.introMusic.loop = true; sounds.gameMusic.loop = true;
+        Object.values(sounds).forEach(sound => sound.volume = 0.5);
+        let score = 0, coinsCollected = 0, currentLane = 1, lastZ = -25;
+        let isJumping = false, isSliding = false, gameOver = false, gameStarted = false;
+        let jumpTime = 0, slideTime = 0;
+        let obstacles = [], powerUps = [], scenery = [];
+        let invincibility = false, speedBoost = 1, controlsInverted = false;
+        let isDipZoneActive = false;
+        const trollPhrases = ["u mad bro?", "Problem?", "U Jelly?", "Rage", "Lol", "LMAO", "Trololol", "Buy $Toll Bro!", "Hodl", "Fuck the jeet!", "FLG!!"];
+        const ui = { scoreText: document.getElementById('score-text'), coinCounter: document.getElementById('coin-counter'), coinIcon: document.getElementById('coin-icon'), gameOver: document.getElementById('game-over'), finalScore: document.getElementById('final-score'), highScore: document.getElementById('high-score'), start: document.getElementById('start-screen'), character: document.getElementById('character-selection'), tutorial: document.getElementById('tutorial-screen'), marketCapModal: document.getElementById('market-cap-modal'), currentHighScoreText: document.getElementById('current-high-score'), trollLaughOverlay: document.getElementById('troll-laugh-overlay'), biomeModal: document.getElementById('biome-modal') };
+
+        // --- GAME FLOW ---
+        function showCharacterSelection() { ui.start.classList.add('hidden'); ui.character.classList.remove('hidden'); sounds.introMusic.play().catch(e => console.warn("Autoplay was blocked.")); }
+
+        function startGame(character) { 
+            ui.character.classList.add('hidden'); 
+            ui.tutorial.classList.remove('hidden');
+            const startButton = ui.tutorial.querySelector('button');
+            startButton.disabled = true;
+            startButton.innerText = 'Loading...';
+            loadingManager.onLoad = () => {
+                startButton.disabled = false;
+                startButton.innerText = 'Start!';
+            };
+            loadHero(character); 
+        }
+
+        function startRunning() { 
+            ui.tutorial.classList.add('hidden'); 
+            gameStarted = true; 
+            headOverlay.classList.remove('hidden');
+            sounds.introMusic.pause(); 
+            sounds.introMusic.currentTime = 0; 
+            sounds.gameMusic.play(); 
+            populateInitialTrack(); 
+            animate(); 
+        }
+
+        function restartGame() {
+            sounds.gameOver.pause(); sounds.gameOver.currentTime = 0;
+            bubbleOverlay.classList.add('hidden');
+            document.body.classList.remove('shake');
+            gameOver = false;
+            ui.gameOver.classList.add('hidden');
+            score = 0; coinsCollected = 0; speedBoost = 1; invincibility = false; controlsInverted = false; document.body.style.filter = 'none';
+            isDipZoneActive = false; gameSpeed = CONFIG.startSpeed; lastZ = -25;
+            [...obstacles, ...powerUps, ...scenery].forEach(obj => scene.remove(obj));
+            obstacles = []; powerUps = []; scenery = [];
+            if (hero) {
+                hero.position.set(0, 0, 0);
+                hero.rotation.y = Math.PI;
+                hero.scale.set(1.2, 1.2, 1.2);
+                headOverlay.src = trollTextures.running;
+                if (mixer) mixer.setTime(0);
+            }
+            // === FIX: Ensure head is visible on restart ===
+            headOverlay.classList.remove('hidden');
+            currentLane = 1;
+            setBiome(BIOMES.normal);
+            populateInitialTrack();
+            sounds.gameMusic.play();
+            if(!gameOver) animate();
+        }
+
+        function triggerGameOver() {
+            if(gameOver) return;
+            gameOver = true;
+            sounds.gameMusic.pause(); sounds.gameMusic.currentTime = 0; sounds.gameOver.play();
+            document.body.classList.add('shake');
+            headOverlay.src = trollTextures.event;
+            const highScore = localStorage.getItem('trollfaceHighScore') || 0;
+            if (score > highScore) { localStorage.setItem('trollfaceHighScore', score); ui.highScore.innerText = `NEW HIGH SCORE: ${score}`; }
+            else { ui.highScore.innerText = `Best: ${highScore}`; }
+            ui.finalScore.innerText = `MKT Cap: ${score}`;
+            ui.gameOver.classList.remove('hidden');
+            // === FIX: Head stays visible on game over ===
+            bubbleOverlay.classList.add('hidden');
+        }
+
+        // --- OBJECT GENERATION & UTILS ---
+        function showMarketCapModal() { const highScore = localStorage.getItem('trollfaceHighScore') || 0; ui.currentHighScoreText.innerText = `Your highest MKT Cap is: ${highScore}`; ui.marketCapModal.classList.remove('hidden'); }
+        function closeMarketCapModal() { ui.marketCapModal.classList.add('hidden'); }
+        function setBiome(biome) { currentBiome = biome; document.body.style.backgroundColor = biome.bodyBg; ground.material.color.setHex(biome.groundColor); scene.fog.color.setHex(biome.fogColor); obstacles.forEach(obs => obs.material.color.setHex(currentBiome.obstacleColor)); }
+        function triggerTrollLaughEvent() { ui.trollLaughOverlay.classList.remove('hidden'); ui.trollLaughOverlay.style.opacity = '1'; sounds.jump.currentTime = 0; sounds.jump.play(); setTimeout(() => { ui.trollLaughOverlay.style.opacity = '0'; setTimeout(() => ui.trollLaughOverlay.classList.add('hidden'), 200); }, 300); }
+        function populateInitialTrack() { for (let i = 0; i < 40; i++) spawnNextChallenge(); for (let i = 0; i < 100; i++) addBiomeScenery(); }
+        function spawnNextChallenge() { const c = Math.random(); if (c < 0.5) createObstacle(); else if (c < 0.8) createPowerUp('coin'); else if (c < 0.88) createSequence(); else if (c < 0.94) createPowerUp(Math.random() < 0.5 ? 'shield' : 'speed'); else if (c < 0.98) createPowerUp('fake_powerup'); else createFakeWallChallenge(); }
+        function createObstacle(type, lane, z, isFake) { const types = [{ type: 'rage', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, { type: 'forever-alone', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, { type: 'bar', geo: new THREE.CylinderGeometry(0.1, 0.1, 1.4, 8), y: 1.5, rotation: { x: 0, y: 0, z: Math.PI / 2 } }]; const data = type ? types.find(t => t.type === type) : types[Math.floor(Math.random() * types.length)]; const obs = new THREE.Mesh(data.geo, new THREE.MeshStandardMaterial({ color: currentBiome.obstacleColor })); if (data.rotation) obs.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z); const l = lane != null ? lane : Math.floor(Math.random() * 3); const fz = z == null ? lastZ - (10 + Math.random() * 8) : z; if (z == null) lastZ = fz; obs.position.set(CONFIG.lanes[l], data.y, fz); obs.castShadow = true; obs.userData = { type: data.type, isShifter: Math.random() < 0.15, hasShifted: false, isFake: isFake, targetX: obs.position.x }; scene.add(obs); obstacles.push(obs); }
+        
+        // === FIX: Game crashing bug ===
+        function createPowerUp(type = 'coin', forceLane = null, zPos = null) {
+            let powerUp;
+            let finalType = type;
+            const isFake = type === 'fake_powerup';
+            if(isFake) finalType = Math.random() < 0.5 ? 'shield' : 'speed';
+
+            if (finalType === 'coin') {
+                powerUp = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), coinMaterial); // Use the correct material
+            } else { 
+                const colors = { shield: 0x00ff00, speed: 0xff00ff }; 
+                powerUp = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 0), new THREE.MeshStandardMaterial({ color: colors[finalType], emissive: colors[finalType] })); 
+            }
+            const lane = forceLane != null ? forceLane : Math.floor(Math.random() * 3);
+            const finalZ = zPos == null ? lastZ - (5 + Math.random() * 5) : zPos;
+            if (zPos == null) lastZ = finalZ;
+            powerUp.position.set(CONFIG.lanes[lane], 0.8, finalZ);
+            powerUp.userData = { type: finalType, isFake: isFake, initialY: 0.8 };
+            scene.add(powerUp);
+            powerUps.push(powerUp);
+        }
+
+        function createFakeWallChallenge() { lastZ -= 20; const fakeLane = Math.floor(Math.random() * 3); const fakeType = Math.random() < 0.5 ? 'rage' : 'bar'; createObstacle(fakeType, fakeLane, lastZ, true); for (let i = 0; i < 3; i++) { if (i !== fakeLane) createObstacle('rage', i, lastZ, false); } }
+        function createSequence() { const types = ['coins_straight', 'jump_slide_dodge', 'bar_coins']; const chosen = types[Math.floor(Math.random() * types.length)]; const lane = Math.floor(Math.random() * 3); switch (chosen) { case 'coins_straight': for (let i = 0; i < 8; i++) createPowerUp('coin', lane); break; case 'jump_slide_dodge': createObstacle('rage', lane); createObstacle('bar', lane); createObstacle('forever-alone', (lane + 1) % 3); break; case 'bar_coins': createObstacle('bar', 1); createPowerUp('coin', 0); createPowerUp('coin', 0); createPowerUp('coin', 2); createPowerUp('coin', 2); break; } }
+        function addBiomeScenery() { let color = (currentBiome === BIOMES.normal) ? (Math.random() > 0.5 ? 0x00ff00 : 0xff0000) : currentBiome.sceneryColor; const mat = new THREE.MeshStandardMaterial({ color: color }); const candle = new THREE.Group(); const bh = Math.random() * 2 + 1; const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, bh, 0.4), mat); const wh = Math.random() * 1.5 + 0.2; const wickGeo = new THREE.CylinderGeometry(0.05, 0.05, wh, 8); const uw = new THREE.Mesh(wickGeo, mat); uw.position.y = bh / 2 + wh / 2; const lw = new THREE.Mesh(wickGeo, mat); lw.position.y = -bh / 2 - wh / 2; candle.add(body, uw, lw); const side = Math.random() < 0.5 ? -1 : 1; candle.position.set(side * (CONFIG.lanes[2] + 3 + Math.random() * 5), (bh + wh * 2) / 2, -20 - Math.random() * 250); scene.add(candle); scenery.push(candle); }
+        
+        // --- MAIN ANIMATION LOOP ---
+        function animate() {
+            if (gameOver) return;
+            const deltaTime = clock.getDelta();
+            requestAnimationFrame(animate);
+            if (mixer) mixer.update(deltaTime);
+            if (!gameStarted || !hero) { renderer.render(scene, camera); return; }
+
+            const currentSpeed = gameSpeed * speedBoost;
+            score += Math.floor(currentSpeed * 20);
+            if (gameSpeed < CONFIG.maxSpeed) gameSpeed += CONFIG.speedUpFactor * score;
+            if (score > 50000 && score < 100000 && !isDipZoneActive) { isDipZoneActive = true; setBiome(BIOMES.dipZone); ui.biomeModal.classList.remove('hidden'); setTimeout(() => ui.biomeModal.classList.add('hidden'), 3000); }
+            else if (score > 100000 && isDipZoneActive) { isDipZoneActive = false; setBiome(BIOMES.normal); }
+            if (Math.random() < 0.0005) triggerTrollLaughEvent();
+
+            hero.position.x = THREE.MathUtils.lerp(hero.position.x, CONFIG.lanes[currentLane], 0.25);
+            if (isJumping) {
+                jumpTime += deltaTime * 5;
+                hero.position.y = Math.sin(jumpTime) * CONFIG.jumpHeight;
+                if (jumpTime >= CONFIG.jumpDuration) { isJumping = false; hero.position.y = 0; headOverlay.src = trollTextures.running; }
+            }
+            if (isSliding) {
+                slideTime++;
+                hero.scale.y = 0.8;
+                if (slideTime > CONFIG.slideDuration) { isSliding = false; hero.scale.set(1.2, 1.2, 1.2); }
+            }
+            
+            if (hero.userData.headBone) {
+                const headPosition = new THREE.Vector3();
+                hero.userData.headBone.getWorldPosition(headPosition);
+                headPosition.project(camera);
+
+                const x = (headPosition.x + 1) / 2 * window.innerWidth;
+                const y = -(headPosition.y - 1) / 2 * window.innerHeight;
+
+                headOverlay.style.transform = `translate(-50%, -50%) translate(${x}px, ${y-20}px)`;
+                bubbleOverlay.style.transform = `translate(-50%, -100%) translate(${x}px, ${y - (window.innerHeight * 0.08)}px)`;
+            }
+
+            const heroBox = new THREE.Box3();
+            const heroCenter = new THREE.Vector3();
+            hero.getWorldPosition(heroCenter);
+            heroCenter.y += 1.5;
+            const heroSize = new THREE.Vector3(0.8, 3.0, 0.8);
+            heroBox.setFromCenterAndSize(heroCenter, heroSize);
+            
+            obstacles.forEach(obs => { if (!obs.userData.isFake && heroBox.intersectsBox(new THREE.Box3().setFromObject(obs)) && !invincibility) { if ((obs.userData.type === 'rage' && !isJumping) || (obs.userData.type === 'bar' && !isSliding) || obs.userData.type === 'forever-alone') triggerGameOver(); } });
+            powerUps.forEach((pu, index) => { if (hero.position.distanceTo(pu.position) < 2.0) { if (pu.userData.isFake) { controlsInverted = true; document.body.style.filter = 'invert(1)'; sounds.gameOver.play(); setTimeout(() => { controlsInverted = false; document.body.style.filter = 'none'; }, 3000); } else if (pu.userData.type === 'coin') { animateCoinCollection(pu); } else if (pu.userData.type === 'shield') { invincibility = true; hero.userData.shield.visible = true; sounds.powerup.play(); setTimeout(() => { invincibility = false; hero.userData.shield.visible = false; }, CONFIG.invincibilityDuration); } else if (pu.userData.type === 'speed') { speedBoost = CONFIG.speedBoostFactor; sounds.powerup.play(); camera.fov = CONFIG.cameraBoostFov; camera.updateProjectionMatrix(); setTimeout(() => { speedBoost = 1; camera.fov = CONFIG.cameraBaseFov; camera.updateProjectionMatrix(); }, CONFIG.speedBoostDuration); } scene.remove(pu); powerUps.splice(index, 1); } });
+
+            [...obstacles, ...powerUps, ...scenery].forEach(obj => {
+                obj.position.z += currentSpeed * 60 * deltaTime;
+                if (obstacles.includes(obj)) { if (obj.userData.isShifter && !obj.userData.hasShifted && obj.position.z > hero.position.z - 30) { const ci = CONFIG.lanes.indexOf(obj.userData.targetX); let ni = (ci + (Math.random() < 0.5 ? 1 : -1) + 3) % 3; obj.userData.targetX = CONFIG.lanes[ni]; obj.userData.hasShifted = true; } obj.position.x = THREE.MathUtils.lerp(obj.position.x, obj.userData.targetX, 0.05); }
+                if (obj.position.z > camera.position.z + 10) { if (obstacles.includes(obj) || powerUps.includes(obj)) { scene.remove(obj); if (obstacles.includes(obj)) obstacles.splice(obstacles.indexOf(obj), 1); else powerUps.splice(powerUps.indexOf(obj), 1); spawnNextChallenge(); } else if (scenery.includes(obj)) { scene.remove(obj); scenery.splice(scenery.indexOf(obj), 1); addBiomeScenery(); } }
+            });
+
+            ui.scoreText.innerText = `MKT Cap: ${score}`;
+            ui.coinCounter.innerText = coinsCollected;
+            camera.position.z = hero.position.z + 5;
+            renderer.render(scene, camera);
+        }
+
+        // --- Coin animation & Utils --- (Unchanged)
+        function animateCoinCollection(coin3D) { const startPos = toScreenPosition(coin3D, camera); const ac = document.createElement('img'); ac.src = 'images/Coin.png'; ac.className = 'coin-animation'; ac.style.left = `${startPos.x}px`; ac.style.top = `${startPos.y}px`; document.body.appendChild(ac); const target = ui.coinIcon.getBoundingClientRect(); requestAnimationFrame(() => { ac.style.left = `${target.left + target.width / 2}px`; ac.style.top = `${target.top + target.height / 2}px`; ac.style.width = '60px'; ac.style.height = '60px'; ac.style.opacity = '0'; }); setTimeout(() => { if (ac.parentElement) document.body.removeChild(ac); coinsCollected++; score += 200; sounds.coin.currentTime = 0; sounds.coin.play(); ui.coinIcon.style.transform = 'scale(1.5)'; setTimeout(() => { ui.coinIcon.style.transform = 'scale(1)'; }, 100); }, 500); }
+        function toScreenPosition(obj, camera) { const vector = new THREE.Vector3(); obj.getWorldPosition(vector); vector.project(camera); vector.x = (vector.x + 1) / 2 * window.innerWidth; vector.y = -(vector.y - 1) / 2 * window.innerHeight; return vector; }
+        
+        // --- CONTROLS ---
+        function handleMoveLeft() { if (controlsInverted) { if (currentLane < 2) currentLane++; } else { if (currentLane > 0) currentLane--; } }
+        function handleMoveRight() { if (controlsInverted) { if (currentLane > 0) currentLane--; } else { if (currentLane < 2) currentLane++; } }
+        function handleJump() { if (!isJumping && !isSliding && hero) { isJumping = true; jumpTime = 0; sounds.jump.currentTime = 0; sounds.jump.play().catch(e => {}); headOverlay.src = trollTextures.event; } }
+        function handleSlide() { if (!isJumping && !isSliding && hero) { isSliding = true; slideTime = 0; } }
+        
+        function handleTrollAction() {
+            if (isJumping || isSliding || !hero) return;
+
+            headOverlay.src = trollTextures.event;
+            setTimeout(() => {
+                if (!isJumping) {
+                    headOverlay.src = trollTextures.running;
+                }
+            }, 500);
+
+            bubbleOverlay.innerText = trollPhrases[Math.floor(Math.random() * trollPhrases.length)];
+            bubbleOverlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                bubbleOverlay.classList.add('hidden');
+            }, 2500);
+        }
+
+        document.addEventListener('keydown', (e) => { if (gameOver || !gameStarted) return; if (e.key === 'ArrowLeft') handleMoveLeft(); else if (e.key === 'ArrowRight') handleMoveRight(); else if (e.key === 'ArrowUp') handleJump(); else if (e.key === 'ArrowDown') handleSlide(); else if (e.key === ' ') handleTrollAction(); });
+        let touchStartX = 0, touchStartY = 0; const swipeThreshold = 50; let lastTap = 0;
+        document.addEventListener('touchstart', (e) => { if (gameOver || !gameStarted) return; touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; }, { passive: true });
+        document.addEventListener('touchend', (e) => { if (gameOver || !gameStarted) return; const touchEndX = e.changedTouches[0].screenX; const touchEndY = e.changedTouches[0].screenY; handleSwipe(touchEndX, touchEndY); const currentTime = new Date().getTime(); const tapLength = currentTime - lastTap; if (tapLength < 300 && tapLength > 0) handleTrollAction(); lastTap = currentTime; });
+        function handleSwipe(x, y) { const dx = x - touchStartX; const dy = y - touchStartY; if (Math.abs(dx) > Math.abs(dy)) { if (Math.abs(dx) > swipeThreshold) (dx > 0) ? handleMoveRight() : handleMoveLeft(); } else { if (Math.abs(dy) > swipeThreshold) (dy > 0) ? handleSlide() : handleJump(); } }
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').then(reg => console.log('SW registered.', reg)).catch(err => console.log('SW registration error:', err)); }); }
+    </script>
+</body>
+</html>
