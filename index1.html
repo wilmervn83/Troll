@@ -97,6 +97,22 @@
             margin-right: 10px;
             transition: transform 0.2s ease-out;
         }
+        /* === TROLL ENERGY BAR === */
+        #troll-energy-container {
+            width: 150px;
+            height: 20px;
+            background-color: #555;
+            border: 2px solid black;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+        #troll-energy-bar {
+            width: 100%;
+            height: 100%;
+            background-color: #ffff00; /* CHANGED TO YELLOW */
+            border-radius: 3px;
+            transition: width 0.2s;
+        }
         .hidden { display: none; visibility: hidden; opacity: 0; }
         .shake { animation: shake 0.5s; }
         .coin-animation {
@@ -147,6 +163,22 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 999; pointer-events: none; opacity: 0; transition: opacity 0.1s;
         }
         #troll-laugh-overlay img { width: 200px; height: 200px; animation: shake 0.5s infinite; }
+        
+        #boss-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.0); /* REMOVED BG */
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; /* POSITION AT TOP */
+            z-index: 999; 
+            pointer-events: none; 
+            opacity: 0; 
+            transition: opacity 0.5s;
+            padding-top: 5vh; /* PADDING FROM TOP */
+        }
+        #boss-overlay img { width: 30vw; height: 30vw; max-width: 300px; max-height: 300px; animation: shake 0.5s infinite; }
+
+
         #biome-modal {
             position: absolute; top: 15%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 15px 30px; border-radius: 10px; border: 3px solid red; z-index: 100; font-size: 2em; color: red; text-shadow: 2px 2px #000;
         }
@@ -190,6 +222,66 @@
             border-style: solid;
             border-color: white transparent transparent transparent;
         }
+        
+        /* === BOSS BATTLE STYLES === */
+        #laser-warnings-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .laser-warning {
+            position: absolute;
+            top: 0;
+            width: 15%; /* Width of a lane */
+            height: 100%;
+            opacity: 0;
+        }
+        .laser-warning.lane-0 { left: 24.5%; }
+        .laser-warning.lane-1 { left: 42.5%; }
+        .laser-warning.lane-2 { left: 60.5%; }
+
+        .laser-warning.warning {
+            background: repeating-linear-gradient(45deg, rgba(255, 255, 0, 0.4), rgba(255, 255, 0, 0.4) 10px, rgba(255, 200, 0, 0.4) 10px, rgba(255, 200, 0, 0.4) 20px);
+            animation: fadeInOut 1s infinite;
+        }
+
+        .laser-warning.active {
+            background: rgba(255, 0, 0, 0.7); /* MADE RED MORE INTENSE */
+            opacity: 1;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* === CHARACTER SELECTION STYLES === */
+        #character-selection .character-options {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            margin-top: 20px;
+        }
+        #character-selection .character-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #character-selection .character-option img {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 10px;
+            border: 3px solid #ffff00;
+            margin-bottom: 15px;
+        }
 
 
         @media (hover: none) and (pointer: coarse) {
@@ -201,6 +293,16 @@
                 width: 120px;
                 padding: 8px;
                 font-size: 10px;
+            }
+             #character-selection .character-option img {
+                width: 60px;
+                height: 60px;
+            }
+            #character-selection .character-options {
+                flex-direction: column;
+            }
+             #character-selection .character-option {
+                margin-bottom: 15px;
             }
         }
         @media (max-width: 400px) {
@@ -215,9 +317,11 @@
     <div id="game-container">
         <img id="trollface-head-overlay" class="game-overlay hidden" src="images/troll1.png">
         <div id="thought-bubble-overlay" class="game-overlay hidden"></div>
+        <div id="laser-warnings-container"></div>
     </div>
 
     <div id="troll-laugh-overlay" class="hidden"> <img src="images/troll.png" alt="Trolling"> </div>
+    <div id="boss-overlay" class="hidden"> <img src="images/$Troll.png" alt="Boss"> </div>
     <div id="biome-modal" class="hidden"> EAT THE DIP </div>
     
     <div id="troll-logo-container"> <span>$TROLL</span> <img src="images/troll.png" alt="Troll Logo"> </div>
@@ -228,9 +332,27 @@
     </div>
 
     <div id="start-screen" class="screen"> <h1>Trollface Adventure</h1> <img src="images/troll.png" alt="Trollface" width="150" style="background: white; border-radius: 10px;"> <p>The Final Challenge!</p> <button onclick="showCharacterSelection()">Play</button> <button onclick="showMarketCapModal()">MKT Cap</button> <button onclick="window.close()">Exit</button> </div>
-    <div id="character-selection" class="screen hidden"> <h2>Choose your Troll</h2> <button onclick="startGame('classic')">Classic</button> <button onclick="startGame('$Troll')">Laser Eyes</button> <button onclick="startGame('sunglasses')">Sunglasses</button> </div>
+    
+    <div id="character-selection" class="screen hidden"> 
+        <h2>Choose your Troll</h2> 
+        <div class="character-options">
+            <div class="character-option">
+                <img src="images/troll.png" alt="Classic Troll">
+                <button onclick="startGame('classic')">Classic</button> 
+            </div>
+            <div class="character-option">
+                <img src="images/$Troll.png" alt="Laser Eyes Troll">
+                <button onclick="startGame('$Troll')">Laser Eyes</button> 
+            </div>
+            <div class="character-option">
+                <img src="images/troll_sunglasses.png" alt="Sunglasses Troll">
+                <button onclick="startGame('sunglasses')">Sunglasses</button> 
+            </div>
+        </div>
+    </div>
+
     <div id="tutorial-screen" class="screen hidden"> <h2>Move or get trolled!</h2> <div id="keyboard-tutorial"> <p>Left/Right Arrows: Move</p> <p>Up Arrow: Jump</p> <p>Down Arrow: Slide</p> <p>Spacebar: Troll</p> </div> <div id="touch-tutorial"> <p>Swipe Left/Right: Move</p> <p>Swipe Up: Jump</p> <p>Swipe Down: Slide</p> <p>Double Tap: Troll</p> </div> <button onclick="startRunning()">Start!</button> </div>
-    <div id="ui-container"> <div class="ui-element"> <span id="score-text">MKT Cap: 0</span> </div> <div class="ui-element"> <img id="coin-icon" src="images/Coin.png" alt="Coin"> <span id="coin-counter">0</span> </div> </div>
+    <div id="ui-container"> <div class="ui-element"> <span id="score-text">MKT Cap: 0</span> </div> <div class="ui-element"> <img id="coin-icon" src="images/Coin.png" alt="Coin"> <span id="coin-counter">0</span> </div> <div id="troll-energy-container"> <div id="troll-energy-bar"></div> </div> </div>
     <div id="game-over" class="screen hidden"> <h2>U Mad Bro?</h2> <p id="final-score">MKT Cap: 0</p> <p id="high-score">Best: 0</p> <button onclick="restartGame()">Restart</button> </div>
     <div id="market-cap-modal" class="screen hidden"> <h2 style="color: #ffff00;">Historical MKT Cap</h2> <p id="current-high-score">Loading...</p> <button onclick="closeMarketCapModal()">Close</button> </div>
 
@@ -245,6 +367,7 @@
             jumpDuration: Math.PI, slideDuration: 15, lanes: [-1.8, 0, 1.8], invincibilityDuration: 5000,
             speedBoostDuration: 5000, speedBoostFactor: 1.5, 
             cameraBaseFov: 70, cameraBoostFov: 85, 
+            trollEnergyMax: 100, trollEnergyCost: 50, trollEnergyRegen: 0.2,
         };
         let gameSpeed = CONFIG.startSpeed;
 
@@ -266,9 +389,14 @@
         sun.position.set(2, 5, 3); sun.castShadow = true; scene.add(sun);
         const BIOMES = {
             normal: { groundColor: 0x228B22, obstacleColor: 0xff0000, sceneryColor: 0x00ff00, fogColor: 0x88ff88, bodyBg: '#f0fff0' },
-            dipZone: { groundColor: 0xff0000, obstacleColor: 0x00ff00, sceneryColor: 0x00ff00, fogColor: 0x100000, bodyBg: '#000000' }
+            dipZone: { groundColor: 0xff0000, obstacleColor: 0x00ff00, sceneryColor: 0x00ff00, fogColor: 0x100000, bodyBg: '#000000' },
+            iceZone: { groundColor: 0x9ACEEB, obstacleColor: 0xFFFFFF, sceneryColor: 0x0000FF, fogColor: 0xE0FFFF, bodyBg: '#E0FFFF' },
+            moonZone: { groundColor: 0x808080, obstacleColor: 0xC0C0C0, sceneryColor: 0, fogColor: 0x000010, bodyBg: '#000010' }
         };
         let currentBiome = BIOMES.normal;
+        let activeBiomeKey = 'normal';
+        let laneChangeSpeed = 0.25;
+        let currentJumpHeight = CONFIG.jumpHeight;
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(12, 1000), new THREE.MeshStandardMaterial({ color: currentBiome.groundColor }));
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
         scene.fog = new THREE.FogExp2(currentBiome.fogColor, 0.015);
@@ -289,6 +417,7 @@
         
         const headOverlay = document.getElementById('trollface-head-overlay');
         const bubbleOverlay = document.getElementById('thought-bubble-overlay');
+        const laserWarningContainer = document.getElementById('laser-warnings-container');
 
         function loadHero(character) {
             trollTextures.running = 'images/troll1.png';
@@ -298,13 +427,10 @@
             loader.load('images/Animation_Run_03_withSkin.glb', (gltf) => {
                 hero = gltf.scene;
 
-                // === MODIFICATION START: Make character's body white (CORRECTED) ===
-                // This material needs "skinning: true" to work with the animated model's skeleton.
                 const whiteMaterial = new THREE.MeshStandardMaterial({ 
                     color: 0xffffff,
-                    skinning: true // <-- THIS IS THE FIX
+                    skinning: true
                 });
-                // === MODIFICATION END ===
 
                 hero.scale.set(1.2, 1.2, 1.2);
                 hero.rotation.y = Math.PI;
@@ -335,18 +461,27 @@
             powerup: new Audio('images/evil.mp3'), 
             gameOver: new Audio('images/oh-no.mp3'), 
             introMusic: new Audio('images/intro_Troll.mp3'), 
-            gameMusic: new Audio('images/trololo.mp3') 
+            gameMusic: new Audio('images/trololo.mp3'),
+            trollSmash: new Audio('https://www.myinstants.com/media/sounds/metal-pipe-falling-sound-effect-2.mp3')
         };
         sounds.introMusic.loop = true; sounds.gameMusic.loop = true;
         Object.values(sounds).forEach(sound => sound.volume = 0.5);
         let score = 0, coinsCollected = 0, currentLane = 1, lastZ = -25;
-        let isJumping = false, isSliding = false, gameOver = false, gameStarted = false;
+        let isJumping = false, isSliding = false, gameOver = false, gameStarted = false, isTrolling = false;
         let jumpTime = 0, slideTime = 0;
         let obstacles = [], powerUps = [], scenery = [];
         let invincibility = false, speedBoost = 1, controlsInverted = false;
-        let isDipZoneActive = false;
+        let trollEnergy = CONFIG.trollEnergyMax;
         const trollPhrases = ["u mad bro?", "Problem?", "U Jelly?", "Rage", "Lol", "LMAO", "Trololol", "Buy $Toll Bro!", "Hodl", "Fuck the jeet!", "FLG!!"];
-        const ui = { scoreText: document.getElementById('score-text'), coinCounter: document.getElementById('coin-counter'), coinIcon: document.getElementById('coin-icon'), gameOver: document.getElementById('game-over'), finalScore: document.getElementById('final-score'), highScore: document.getElementById('high-score'), start: document.getElementById('start-screen'), character: document.getElementById('character-selection'), tutorial: document.getElementById('tutorial-screen'), marketCapModal: document.getElementById('market-cap-modal'), currentHighScoreText: document.getElementById('current-high-score'), trollLaughOverlay: document.getElementById('troll-laugh-overlay'), biomeModal: document.getElementById('biome-modal') };
+        const ui = { scoreText: document.getElementById('score-text'), coinCounter: document.getElementById('coin-counter'), coinIcon: document.getElementById('coin-icon'), gameOver: document.getElementById('game-over'), finalScore: document.getElementById('final-score'), highScore: document.getElementById('high-score'), start: document.getElementById('start-screen'), character: document.getElementById('character-selection'), tutorial: document.getElementById('tutorial-screen'), marketCapModal: document.getElementById('market-cap-modal'), currentHighScoreText: document.getElementById('current-high-score'), trollLaughOverlay: document.getElementById('troll-laugh-overlay'), biomeModal: document.getElementById('biome-modal'), trollEnergyBar: document.getElementById('troll-energy-bar'), bossOverlay: document.getElementById('boss-overlay') };
+
+        // BOSS BATTLE VARIABLES
+        let isBossActive = false;
+        let bossBattleTimer = 0;
+        let nextBossScore = 100000;
+        let bossAttackTimer = 0;
+        let bossAttackSequence = [];
+        let activeLaserLanes = [];
 
         // --- GAME FLOW ---
         function showCharacterSelection() { ui.start.classList.add('hidden'); ui.character.classList.remove('hidden'); sounds.introMusic.play().catch(e => console.warn("Autoplay was blocked.")); }
@@ -382,7 +517,11 @@
             gameOver = false;
             ui.gameOver.classList.add('hidden');
             score = 0; coinsCollected = 0; speedBoost = 1; invincibility = false; controlsInverted = false; document.body.style.filter = 'none';
-            isDipZoneActive = false; gameSpeed = CONFIG.startSpeed; lastZ = -25;
+            trollEnergy = CONFIG.trollEnergyMax;
+            activeBiomeKey = 'normal';
+            gameSpeed = CONFIG.startSpeed; lastZ = -25;
+            isBossActive = false;
+            nextBossScore = 100000;
             [...obstacles, ...powerUps, ...scenery].forEach(obj => scene.remove(obj));
             obstacles = []; powerUps = []; scenery = [];
             
@@ -420,11 +559,50 @@
         // --- OBJECT GENERATION & UTILS ---
         function showMarketCapModal() { const highScore = localStorage.getItem('trollfaceHighScore') || 0; ui.currentHighScoreText.innerText = `Your highest MKT Cap is: ${highScore}`; ui.marketCapModal.classList.remove('hidden'); }
         function closeMarketCapModal() { ui.marketCapModal.classList.add('hidden'); }
-        function setBiome(biome) { currentBiome = biome; document.body.style.backgroundColor = biome.bodyBg; ground.material.color.setHex(biome.groundColor); scene.fog.color.setHex(biome.fogColor); obstacles.forEach(obs => obs.material.color.setHex(currentBiome.obstacleColor)); }
+        function setBiome(biome) { 
+            currentBiome = biome; 
+            laneChangeSpeed = (biome === BIOMES.iceZone) ? 0.10 : 0.25;
+            currentJumpHeight = (biome === BIOMES.moonZone) ? CONFIG.jumpHeight * 1.5 : CONFIG.jumpHeight;
+            document.body.style.backgroundColor = biome.bodyBg; 
+            ground.material.color.setHex(biome.groundColor); 
+            scene.fog.color.setHex(biome.fogColor); 
+            obstacles.forEach(obs => { 
+                if (obs.userData.type !== 'fud') obs.material.color.setHex(currentBiome.obstacleColor) 
+            }); 
+        }
         function triggerTrollLaughEvent() { ui.trollLaughOverlay.classList.remove('hidden'); ui.trollLaughOverlay.style.opacity = '1'; sounds.jump.currentTime = 0; sounds.jump.play(); setTimeout(() => { ui.trollLaughOverlay.style.opacity = '0'; setTimeout(() => ui.trollLaughOverlay.classList.add('hidden'), 200); }, 300); }
         function populateInitialTrack() { for (let i = 0; i < 40; i++) spawnNextChallenge(); for (let i = 0; i < 100; i++) addBiomeScenery(); }
         function spawnNextChallenge() { const c = Math.random(); if (c < 0.5) createObstacle(); else if (c < 0.8) createPowerUp('coin'); else if (c < 0.88) createSequence(); else if (c < 0.94) createPowerUp(Math.random() < 0.5 ? 'shield' : 'speed'); else if (c < 0.98) createPowerUp('fake_powerup'); else createFakeWallChallenge(); }
-        function createObstacle(type, lane, z, isFake) { const types = [{ type: 'rage', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, { type: 'forever-alone', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, { type: 'bar', geo: new THREE.CylinderGeometry(0.1, 0.1, 1.4, 8), y: 1.5, rotation: { x: 0, y: 0, z: Math.PI / 2 } }]; const data = type ? types.find(t => t.type === type) : types[Math.floor(Math.random() * types.length)]; const obs = new THREE.Mesh(data.geo, new THREE.MeshStandardMaterial({ color: currentBiome.obstacleColor })); if (data.rotation) obs.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z); const l = lane != null ? lane : Math.floor(Math.random() * 3); const fz = z == null ? lastZ - (10 + Math.random() * 8) : z; if (z == null) lastZ = fz; obs.position.set(CONFIG.lanes[l], data.y, fz); obs.castShadow = true; obs.userData = { type: data.type, isShifter: Math.random() < 0.15, hasShifted: false, isFake: isFake, targetX: obs.position.x }; scene.add(obs); obstacles.push(obs); }
+        
+        function createObstacle(type, lane, z, isFake) { 
+            const types = [
+                { type: 'rage', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, 
+                { type: 'forever-alone', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, 
+                { type: 'bar', geo: new THREE.CylinderGeometry(0.1, 0.1, 1.4, 8), y: 1.5, rotation: { x: 0, y: 0, z: Math.PI / 2 } },
+                { type: 'fud', geo: new THREE.BoxGeometry(1.5, 3, 0.2), y: 1.5, material: new THREE.MeshStandardMaterial({ color: 0x800080, transparent: true, opacity: 0.7 }) },
+                { type: 'icicle', geo: new THREE.ConeGeometry(0.3, 1.5, 8), y: 2.5 },
+                { type: 'crater', geo: new THREE.TorusGeometry(0.6, 0.2, 8, 16), y: 0.2, rotation: { x: Math.PI / 2, y: 0, z: 0 } }
+            ]; 
+            let data = type ? types.find(t => t.type === type) : types[Math.floor(Math.random() * types.length)]; 
+
+            // Biome-specific obstacle swapping
+            if (activeBiomeKey === 'iceZone' && data.type === 'bar') data = types.find(t => t.type === 'icicle');
+            else if (activeBiomeKey !== 'iceZone' && data.type === 'icicle') data = types.find(t => t.type === 'bar');
+            
+            if (activeBiomeKey === 'moonZone' && (data.type === 'rage' || data.type === 'forever-alone')) data = types.find(t => t.type === 'crater');
+            else if (activeBiomeKey !== 'moonZone' && data.type === 'crater') data = types.find(t => t.type === 'rage');
+
+            const material = data.material ? data.material : new THREE.MeshStandardMaterial({ color: currentBiome.obstacleColor });
+            const obs = new THREE.Mesh(data.geo, material); 
+            if (data.rotation) obs.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z); 
+            const l = lane != null ? lane : Math.floor(Math.random() * 3); 
+            const fz = z == null ? lastZ - (10 + Math.random() * 8) : z; 
+            if (z == null) lastZ = fz; 
+            obs.position.set(CONFIG.lanes[l], data.y, fz); obs.castShadow = true; 
+            obs.userData = { type: data.type, isShifter: data.type !== 'fud' && Math.random() < 0.15, hasShifted: false, isFake: isFake, targetX: obs.position.x }; 
+            scene.add(obs); 
+            obstacles.push(obs); 
+        }
         
         function createPowerUp(type = 'coin', forceLane = null, zPos = null) {
             let powerUp;
@@ -448,8 +626,131 @@
         }
 
         function createFakeWallChallenge() { lastZ -= 20; const fakeLane = Math.floor(Math.random() * 3); const fakeType = Math.random() < 0.5 ? 'rage' : 'bar'; createObstacle(fakeType, fakeLane, lastZ, true); for (let i = 0; i < 3; i++) { if (i !== fakeLane) createObstacle('rage', i, lastZ, false); } }
-        function createSequence() { const types = ['coins_straight', 'jump_slide_dodge', 'bar_coins']; const chosen = types[Math.floor(Math.random() * types.length)]; const lane = Math.floor(Math.random() * 3); switch (chosen) { case 'coins_straight': for (let i = 0; i < 8; i++) createPowerUp('coin', lane, lastZ - (i * 2)); break; case 'jump_slide_dodge': createObstacle('rage', lane, lastZ - 10); createObstacle('bar', lane, lastZ-20); createObstacle('forever-alone', (lane + 1) % 3, lastZ-15); break; case 'bar_coins': createObstacle('bar', 1, lastZ-10); createPowerUp('coin', 0, lastZ-5); createPowerUp('coin', 0, lastZ-7); createPowerUp('coin', 2, lastZ-15); createPowerUp('coin', 2, lastZ-17); break; } }
-        function addBiomeScenery() { let color = (currentBiome === BIOMES.normal) ? (Math.random() > 0.5 ? 0x00ff00 : 0xff0000) : currentBiome.sceneryColor; const mat = new THREE.MeshStandardMaterial({ color: color }); const candle = new THREE.Group(); const bh = Math.random() * 2 + 1; const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, bh, 0.4), mat); const wh = Math.random() * 1.5 + 0.2; const wickGeo = new THREE.CylinderGeometry(0.05, 0.05, wh, 8); const uw = new THREE.Mesh(wickGeo, mat); uw.position.y = bh / 2 + wh / 2; const lw = new THREE.Mesh(wickGeo, mat); lw.position.y = -bh / 2 - wh / 2; candle.add(body, uw, lw); const side = Math.random() < 0.5 ? -1 : 1; candle.position.set(side * (CONFIG.lanes[2] + 3 + Math.random() * 5), (bh + wh * 2) / 2, -20 - Math.random() * 250); scene.add(candle); scenery.push(candle); }
+        function createSequence() { const types = ['coins_straight', 'jump_slide_dodge', 'bar_coins', 'fud_wall']; const chosen = types[Math.floor(Math.random() * types.length)]; const lane = Math.floor(Math.random() * 3); switch (chosen) { case 'coins_straight': for (let i = 0; i < 8; i++) createPowerUp('coin', lane, lastZ - (i * 2)); break; case 'jump_slide_dodge': createObstacle('rage', lane, lastZ - 10); createObstacle('bar', lane, lastZ-20); createObstacle('forever-alone', (lane + 1) % 3, lastZ-15); break; case 'bar_coins': createObstacle('bar', 1, lastZ-10); createPowerUp('coin', 0, lastZ-5); createPowerUp('coin', 0, lastZ-7); createPowerUp('coin', 2, lastZ-15); createPowerUp('coin', 2, lastZ-17); break; case 'fud_wall': createObstacle('fud', 0, lastZ-15); createObstacle('fud', 1, lastZ-15); createObstacle('fud', 2, lastZ-15); break; } }
+        
+        function addBiomeScenery() { 
+            let color;
+            if (activeBiomeKey === 'moonZone') {
+                color = Math.random() < 0.5 ? 0x00ff00 : 0xff0000;
+            } else if (currentBiome === BIOMES.iceZone) {
+                color = 0x0000FF; 
+            } else {
+                color = (currentBiome === BIOMES.normal) ? (Math.random() > 0.5 ? 0x00ff00 : 0xff0000) : currentBiome.sceneryColor;
+            }
+            const mat = new THREE.MeshStandardMaterial({ color: color }); 
+            const candle = new THREE.Group(); 
+            const bh = Math.random() * 2 + 1; 
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, bh, 0.4), mat); 
+            const wh = Math.random() * 1.5 + 0.2; 
+            const wickGeo = new THREE.CylinderGeometry(0.05, 0.05, wh, 8); 
+            const uw = new THREE.Mesh(wickGeo, mat); 
+            uw.position.y = bh / 2 + wh / 2; 
+            const lw = new THREE.Mesh(wickGeo, mat); 
+            lw.position.y = -bh / 2 - wh / 2; 
+            candle.add(body, uw, lw); 
+            const side = Math.random() < 0.5 ? -1 : 1; 
+            candle.position.set(side * (CONFIG.lanes[2] + 3 + Math.random() * 5), (bh + wh * 2) / 2, -20 - Math.random() * 250); 
+            scene.add(candle); 
+            scenery.push(candle); 
+        }
+
+        // --- BOSS BATTLE LOGIC ---
+        function startBossBattle() {
+            isBossActive = true;
+            bossBattleTimer = 30; // 30 seconds survival time
+            bossAttackTimer = 0;
+            nextBossScore += 100000; // Set up for the next boss
+            
+            ui.bossOverlay.classList.remove('hidden');
+            ui.bossOverlay.style.opacity = '1';
+            
+            // Define the sequence of attacks with timings
+            bossAttackSequence = [
+                { time: 2, action: triggerLaserAttack },
+                { time: 8, action: triggerBlockadeAttack },
+                { time: 14, action: triggerInversionAttack },
+                { time: 20, action: triggerLaserAttack },
+                { time: 26, action: triggerBlockadeAttack },
+            ];
+        }
+
+        function runBossLogic(deltaTime) {
+            bossBattleTimer -= deltaTime;
+            bossAttackTimer += deltaTime;
+
+            // Trigger next attack in sequence
+            if (bossAttackSequence.length > 0 && bossAttackTimer >= bossAttackSequence[0].time) {
+                bossAttackSequence[0].action();
+                bossAttackSequence.shift(); // Remove triggered attack
+            }
+
+            if (bossBattleTimer <= 0) {
+                endBossBattle();
+            }
+        }
+
+        function endBossBattle() {
+            isBossActive = false;
+            ui.bossOverlay.style.opacity = '0';
+            setTimeout(() => ui.bossOverlay.classList.add('hidden'), 500);
+            
+            coinsCollected += 20; // Reward
+            sounds.powerup.play();
+
+            // Clear any lingering boss effects
+            laserWarningContainer.innerHTML = '';
+            activeLaserLanes = [];
+        }
+
+        function triggerLaserAttack() {
+            if (!isBossActive) return;
+            const lanesToAttack = Math.random() < 0.5 ? 1 : 2; // Attack 1 or 2 lanes
+            let availableLanes = [0, 1, 2];
+            activeLaserLanes = [];
+
+            for (let i = 0; i < lanesToAttack; i++) {
+                const laneIndex = Math.floor(Math.random() * availableLanes.length);
+                const chosenLane = availableLanes.splice(laneIndex, 1)[0];
+                activeLaserLanes.push(chosenLane);
+
+                const warningDiv = document.createElement('div');
+                warningDiv.className = `laser-warning lane-${chosenLane} warning`;
+                laserWarningContainer.appendChild(warningDiv);
+
+                // From warning to active laser
+                setTimeout(() => {
+                    warningDiv.classList.remove('warning');
+                    warningDiv.classList.add('active');
+                }, 2000);
+
+                // Cleanup
+                setTimeout(() => {
+                    if (warningDiv.parentElement) laserWarningContainer.removeChild(warningDiv);
+                    // Remove from active lanes after effect ends
+                    const index = activeLaserLanes.indexOf(chosenLane);
+                    if (index > -1) activeLaserLanes.splice(index, 1);
+                }, 4000);
+            }
+        }
+
+        function triggerBlockadeAttack() {
+            if (!isBossActive) return;
+            const zPos = hero.position.z - 30;
+            createObstacle('fud', 0, zPos, false);
+            createObstacle('fud', 1, zPos, false);
+            createObstacle('fud', 2, zPos, false);
+        }
+
+        function triggerInversionAttack() {
+            if (!isBossActive) return;
+            controlsInverted = true;
+            document.body.style.filter = 'invert(1)';
+            sounds.gameOver.play(); // Reuse laugh sound
+            setTimeout(() => {
+                controlsInverted = false;
+                document.body.style.filter = 'none';
+            }, 5000); // 5 seconds
+        }
         
         // --- MAIN ANIMATION LOOP ---
         function animate() {
@@ -459,23 +760,54 @@
             if (mixer) mixer.update(deltaTime);
             if (!gameStarted || !hero) { renderer.render(scene, camera); return; }
 
+            // --- BOSS ACTIVATION CHECK ---
+            if (score >= nextBossScore && !isBossActive) {
+                startBossBattle();
+            }
+
+            if (isBossActive) {
+                runBossLogic(deltaTime);
+            }
+
+            // Troll energy regeneration
+            if (trollEnergy < CONFIG.trollEnergyMax) {
+                trollEnergy += CONFIG.trollEnergyRegen;
+                ui.trollEnergyBar.style.width = `${(trollEnergy / CONFIG.trollEnergyMax) * 100}%`;
+            }
+
             const currentSpeed = gameSpeed * speedBoost;
-            score += Math.floor(currentSpeed * 20);
+            if(!isBossActive) score += Math.floor(currentSpeed * 20);
             if (gameSpeed < CONFIG.maxSpeed) gameSpeed += CONFIG.speedUpFactor;
-            if (score > 50000 && score < 100000 && !isDipZoneActive) { isDipZoneActive = true; setBiome(BIOMES.dipZone); ui.biomeModal.classList.remove('hidden'); setTimeout(() => ui.biomeModal.classList.add('hidden'), 3000); }
-            else if (score > 100000 && isDipZoneActive) { isDipZoneActive = false; setBiome(BIOMES.normal); }
+            
+            // --- Biome Transition Logic ---
+            if (!isBossActive) {
+                let nextBiomeKey;
+                if (score > 75000) { nextBiomeKey = 'moonZone'; }
+                else if (score > 50000) { nextBiomeKey = 'iceZone'; }
+                else if (score > 25000) { nextBiomeKey = 'dipZone'; }
+                else { nextBiomeKey = 'normal'; }
+
+                if (nextBiomeKey !== activeBiomeKey) {
+                    activeBiomeKey = nextBiomeKey;
+                    setBiome(BIOMES[activeBiomeKey]);
+                    if (activeBiomeKey === 'dipZone') { ui.biomeModal.innerText = "EAT THE DIP"; ui.biomeModal.classList.remove('hidden'); setTimeout(() => ui.biomeModal.classList.add('hidden'), 3000); }
+                    else if (activeBiomeKey === 'iceZone') { ui.biomeModal.innerText = "LA CONGELACIÓN DEL MERCADO"; ui.biomeModal.classList.remove('hidden'); setTimeout(() => ui.biomeModal.classList.add('hidden'), 3000); }
+                    else if (activeBiomeKey === 'moonZone') { ui.biomeModal.innerText = "TO THE MOON!"; ui.biomeModal.classList.remove('hidden'); setTimeout(() => ui.biomeModal.classList.add('hidden'), 3000); }
+                }
+            }
+
             if (Math.random() < 0.0005) triggerTrollLaughEvent();
 
-            hero.position.x = THREE.MathUtils.lerp(hero.position.x, CONFIG.lanes[currentLane], 0.25);
+            hero.position.x = THREE.MathUtils.lerp(hero.position.x, CONFIG.lanes[currentLane], laneChangeSpeed);
             if (isJumping) {
                 jumpTime += deltaTime * 5;
-                hero.position.y = Math.sin(jumpTime) * CONFIG.jumpHeight;
+                hero.position.y = Math.sin(jumpTime) * currentJumpHeight;
                 if (jumpTime >= CONFIG.jumpDuration) { isJumping = false; hero.position.y = 0; headOverlay.src = trollTextures.running; }
             }
             if (isSliding) {
                 slideTime++;
                 hero.scale.y = 0.8;
-                hero.position.y = -0.6; // lower the hero a bit while sliding
+                hero.position.y = -0.6;
                 if (slideTime > CONFIG.slideDuration) { isSliding = false; hero.scale.set(1.2, 1.2, 1.2); hero.position.y = 0;}
             }
             
@@ -497,31 +829,44 @@
             const heroBox = new THREE.Box3();
             const heroCenter = new THREE.Vector3();
             hero.getWorldPosition(heroCenter);
-            heroCenter.y += isSliding ? 0.5 : 1.0; // Adjust center for sliding
-            const heroSize = new THREE.Vector3(0.8, isSliding ? 1.0 : 2.0, 0.8); // Adjust size for sliding
+            heroCenter.y += isSliding ? 0.5 : 1.0; 
+            const heroSize = new THREE.Vector3(0.8, isSliding ? 1.0 : 2.0, 0.8);
             heroBox.setFromCenterAndSize(heroCenter, heroSize);
             
+            // Boss laser collision
+            if (activeLaserLanes.includes(currentLane) && !invincibility) {
+                triggerGameOver();
+            }
+
             // Obstacle collision
-            obstacles.forEach(obs => { 
+            obstacles.forEach((obs, index) => { 
                 const obsBox = new THREE.Box3().setFromObject(obs);
-                if (!obs.userData.isFake && heroBox.intersectsBox(obsBox) && !invincibility) { 
-                    if ((obs.userData.type === 'rage' && !isJumping) || (obs.userData.type === 'bar' && !isSliding) || obs.userData.type === 'forever-alone') {
-                        triggerGameOver(); 
-                    }
-                } 
+                if (heroBox.intersectsBox(obsBox)) {
+                    if (obs.userData.type === 'fud' && isTrolling) {
+                        sounds.trollSmash.currentTime = 0;
+                        sounds.trollSmash.play();
+                        scene.remove(obs);
+                        obstacles.splice(index, 1);
+                    } else if (!obs.userData.isFake && !invincibility) { 
+                        if ( ((obs.userData.type === 'rage' || obs.userData.type === 'forever-alone' || obs.userData.type === 'crater') && !isJumping) || 
+                             ((obs.userData.type === 'bar' || obs.userData.type === 'icicle') && !isSliding) || 
+                             obs.userData.type === 'fud') 
+                        {
+                            triggerGameOver(); 
+                        }
+                    } 
+                }
             });
 
-            // Power-up collision (more precise for coins)
+            // Power-up collision
             powerUps.forEach((pu, index) => { 
                 if (pu.userData.type === 'coin') {
-                     // Use distance check for coins for more accuracy
                     if (hero.position.distanceTo(pu.position) < 1.0) { 
                         animateCoinCollection(pu); 
                         scene.remove(pu); 
                         powerUps.splice(index, 1);
                     }
                 } else {
-                    // Use bounding box for other powerups
                     const powerUpBox = new THREE.Box3().setFromObject(pu);
                     if (heroBox.intersectsBox(powerUpBox)) {
                         if (pu.userData.isFake) { 
@@ -547,12 +892,12 @@
                 }
             });
 
-            // Object movement and recycling
+            // Object movement and recycling (stops normal spawning during boss fight)
             [...obstacles, ...powerUps, ...scenery].forEach(obj => {
                 obj.position.z += currentSpeed * 60 * deltaTime;
                 if (obstacles.includes(obj)) { if (obj.userData.isShifter && !obj.userData.hasShifted && obj.position.z > hero.position.z - 30) { const ci = CONFIG.lanes.indexOf(obj.userData.targetX); let ni = (ci + (Math.random() < 0.5 ? 1 : -1) + 3) % 3; obj.userData.targetX = CONFIG.lanes[ni]; obj.userData.hasShifted = true; } obj.position.x = THREE.MathUtils.lerp(obj.position.x, obj.userData.targetX, 0.05); }
                 if (obj.position.z > camera.position.z + 10) { 
-                    if (obstacles.includes(obj) || powerUps.includes(obj)) { 
+                    if (!isBossActive && (obstacles.includes(obj) || powerUps.includes(obj))) { 
                         scene.remove(obj); 
                         if (obstacles.includes(obj)) obstacles.splice(obstacles.indexOf(obj), 1); 
                         else powerUps.splice(powerUps.indexOf(obj), 1); 
@@ -560,7 +905,7 @@
                     } else if (scenery.includes(obj)) { 
                         scene.remove(obj); 
                         scenery.splice(scenery.indexOf(obj), 1); 
-                        addBiomeScenery(); 
+                        if (!isBossActive) addBiomeScenery(); 
                     } 
                 }
             });
@@ -594,6 +939,7 @@
                 if (ac.parentElement) gameContainer.removeChild(ac); 
                 coinsCollected++; 
                 score += 200; 
+                trollEnergy = Math.min(CONFIG.trollEnergyMax, trollEnergy + 5);
                 sounds.coin.currentTime = 0; 
                 sounds.coin.play(); 
                 ui.coinIcon.style.transform = 'scale(1.5)'; 
@@ -609,17 +955,23 @@
         function handleSlide() { if (!isJumping && !isSliding && hero) { isSliding = true; slideTime = 0; } }
         
         function handleTrollAction() {
-            if (isJumping || isSliding || !hero) return;
+            if (isJumping || isSliding || !hero || trollEnergy < CONFIG.trollEnergyCost) return;
+            
+            trollEnergy -= CONFIG.trollEnergyCost;
+            isTrolling = true;
+            
             headOverlay.src = trollTextures.event;
             setTimeout(() => {
                 if (!isJumping) headOverlay.src = trollTextures.running;
+                isTrolling = false;
             }, 500);
+
             bubbleOverlay.innerText = trollPhrases[Math.floor(Math.random() * trollPhrases.length)];
             bubbleOverlay.classList.remove('hidden');
             setTimeout(() => bubbleOverlay.classList.add('hidden'), 2500);
         }
 
-        document.addEventListener('keydown', (e) => { if (gameOver || !gameStarted) return; if (e.key === 'ArrowLeft') handleMoveLeft(); else if (e.key === 'ArrowRight') handleMoveRight(); else if (e.key === 'ArrowUp') handleJump(); else if (e.key === 'ArrowDown') handleSlide(); else if (e.key === ' ' || e.key === 'Spacebar') handleTrollAction(); });
+        document.addEventListener('keydown', (e) => { if (gameOver || !gameStarted) return; if (e.key === 'ArrowLeft') handleMoveLeft(); else if (e.key === 'ArrowRight') handleMoveRight(); else if (e.key === 'ArrowUp') handleJump(); else if (e.key === 'ArrowDown') handleSlide(); else if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); handleTrollAction(); } });
         let touchStartX = 0, touchStartY = 0; const swipeThreshold = 50; let lastTap = 0;
         document.addEventListener('touchstart', (e) => { if (gameOver || !gameStarted) return; touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; }, { passive: true });
         document.addEventListener('touchend', (e) => { if (gameOver || !gameStarted) return; const touchEndX = e.changedTouches[0].screenX; const touchEndY = e.changedTouches[0].screenY; handleSwipe(touchEndX, touchEndY); const currentTime = new Date().getTime(); const tapLength = currentTime - lastTap; if (tapLength < 300 && tapLength > 0) {e.preventDefault(); handleTrollAction();} lastTap = currentTime; });
@@ -657,6 +1009,7 @@
             sounds.coin.muted = isSfxMuted;
             sounds.powerup.muted = isSfxMuted;
             sounds.gameOver.muted = isSfxMuted;
+            sounds.trollSmash.muted = isSfxMuted;
             sfxToggleButton.textContent = isSfxMuted ? '🔇' : '🔊';
         });
 
