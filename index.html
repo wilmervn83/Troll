@@ -421,6 +421,7 @@
         let activeBiomeKey = 'normal';
         let laneChangeSpeed = 0.25;
         let currentJumpHeight = CONFIG.jumpHeight;
+        let biomeScoreOffset = 0;
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(12, 1000), new THREE.MeshStandardMaterial({ color: currentBiome.groundColor }));
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
         scene.fog = new THREE.FogExp2(currentBiome.fogColor, 0.015);
@@ -442,6 +443,8 @@
         const headOverlay = document.getElementById('trollface-head-overlay');
         const bubbleOverlay = document.getElementById('thought-bubble-overlay');
         const laserWarningContainer = document.getElementById('laser-warnings-container');
+
+        let fudMaterial; 
 
         function loadHero(character) {
             trollTextures.running = 'images/troll1.png';
@@ -493,7 +496,7 @@
         let score = 0, coinsCollected = 0, currentLane = 1, lastZ = -25;
         let isJumping = false, isSliding = false, gameOver = false, gameStarted = false, isTrolling = false;
         let jumpTime = 0, slideTime = 0;
-        let obstacles = [], powerUps = [], scenery = [];
+        let obstacles = [], powerUps = [], scenery = [], debris = [];
         let invincibility = false, speedBoost = 1, controlsInverted = false;
         let trollEnergy = CONFIG.trollEnergyMax;
         const trollPhrases = ["u mad bro?", "Problem?", "U Jelly?", "Rage", "Lol", "LMAO", "Trololol", "Buy $Toll Bro!", "Hodl", "Fuck the jeet!", "FLG!!"];
@@ -517,6 +520,9 @@
             const startButton = ui.tutorial.querySelector('button');
             startButton.disabled = true;
             startButton.innerText = 'Loading...';
+            
+            fudMaterial = createFudMaterial();
+
             loadingManager.onLoad = () => {
                 startButton.disabled = false;
                 startButton.innerText = 'Start!';
@@ -534,29 +540,29 @@
             populateInitialTrack(); 
             animate(); 
         }
-//Cambiar aquí Score para probar biomas
+
         function restartGame() {
             sounds.gameOver.pause(); sounds.gameOver.currentTime = 0;
             bubbleOverlay.classList.add('hidden');
             document.body.classList.remove('shake');
             gameOver = false;
             ui.gameOver.classList.add('hidden');
-            score = 0; coinsCollected = 0; speedBoost = 1; invincibility = false; controlsInverted = false; document.body.style.filter = 'none';
+            score = 200001; coinsCollected = 0; speedBoost = 1; invincibility = false; controlsInverted = false; document.body.style.filter = 'none';
             trollEnergy = CONFIG.trollEnergyMax;
             activeBiomeKey = 'normal';
             gameSpeed = CONFIG.startSpeed; lastZ = -25;
+            biomeScoreOffset = 0;
             
-            // MODIFIED: Ensure boss is reset
             isBossActive = false;
             ui.bossOverlay.classList.add('hidden');
             ui.bossOverlay.style.opacity = '0';
-            laserWarningContainer.innerHTML = ''; // Clear any laser warnings
+            laserWarningContainer.innerHTML = ''; 
             activeLaserLanes = [];
-            if(originalBiomeBeforeBoss) endBossBattle(); // Revert colors if game resets during boss
+            if(originalBiomeBeforeBoss) endBossBattle(); 
 
             nextBossScore = 100000;
-            [...obstacles, ...powerUps, ...scenery].forEach(obj => scene.remove(obj));
-            obstacles = []; powerUps = []; scenery = [];
+            [...obstacles, ...powerUps, ...scenery, ...debris].forEach(obj => scene.remove(obj));
+            obstacles = []; powerUps = []; scenery = []; debris = [];
             
             ui.coinIcon.style.transform = 'scale(1)';
 
@@ -590,6 +596,22 @@
         }
 
         // --- OBJECT GENERATION & UTILS ---
+        function createFudMaterial() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 512;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#800080';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.font = 'bold 100px "Press Start 2P"';
+            context.fillStyle = 'white';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText('FUD', canvas.width / 2, canvas.height / 2);
+            const texture = new THREE.CanvasTexture(canvas);
+            return new THREE.MeshStandardMaterial({ map: texture, transparent: true, opacity: 0.85 });
+        }
+        
         function showMarketCapModal() { const highScore = localStorage.getItem('trollfaceHighScore') || 0; ui.currentHighScoreText.innerText = `Your highest MKT Cap is: ${highScore}`; ui.marketCapModal.classList.remove('hidden'); }
         function closeMarketCapModal() { ui.marketCapModal.classList.add('hidden'); }
         function setBiome(biome) { 
@@ -612,13 +634,12 @@
                 { type: 'rage', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, 
                 { type: 'forever-alone', geo: new THREE.BoxGeometry(0.8, 0.8, 0.8), y: 0.4 }, 
                 { type: 'bar', geo: new THREE.CylinderGeometry(0.1, 0.1, 1.4, 8), y: 1.5, rotation: { x: 0, y: 0, z: Math.PI / 2 } },
-                { type: 'fud', geo: new THREE.BoxGeometry(1.5, 3, 0.2), y: 1.5, material: new THREE.MeshStandardMaterial({ color: 0x800080, transparent: true, opacity: 0.7 }) },
+                { type: 'fud', geo: new THREE.BoxGeometry(1.5, 3, 0.2), y: 1.5, material: fudMaterial },
                 { type: 'icicle', geo: new THREE.ConeGeometry(0.3, 1.5, 8), y: 2.5 },
                 { type: 'crater', geo: new THREE.TorusGeometry(0.6, 0.2, 8, 16), y: 0.2, rotation: { x: Math.PI / 2, y: 0, z: 0 } }
             ]; 
             let data = type ? types.find(t => t.type === type) : types[Math.floor(Math.random() * types.length)]; 
 
-            // Biome-specific obstacle swapping
             if (activeBiomeKey === 'iceZone' && data.type === 'bar') data = types.find(t => t.type === 'icicle');
             else if (activeBiomeKey !== 'iceZone' && data.type === 'icicle') data = types.find(t => t.type === 'bar');
             
@@ -692,11 +713,9 @@
         // --- BOSS BATTLE LOGIC ---
         function startBossBattle() {
             isBossActive = true;
-            bossBattleTimer = 30; // 30 seconds survival time
+            bossBattleTimer = 30; 
             bossAttackTimer = 0;
-            nextBossScore += 100000; // Set up for the next boss
             
-            // MODIFICATION: Store current biome colors and switch to astral theme
             originalBiomeBeforeBoss = {
                 groundColor: ground.material.color.getHex(),
                 fogColor: scene.fog.color.getHex(),
@@ -704,39 +723,16 @@
                 obstacleColor: currentBiome.obstacleColor
             };
 
-            const astralBiome = {
-                groundColor: 0x4a00e0, // Neon Purple
-                obstacleColor: 0x00ffff, // Neon Cyan
-                sceneryColors: [0xff00ff, 0x00ff00, 0x00ffff], // Neon Pink, Green, Cyan
-                fogColor: 0x1f0033, // Dark Purple
-                bodyBg: '#000010' // Almost black
-            };
-
+            const astralBiome = { groundColor: 0x4a00e0, obstacleColor: 0x00ffff, sceneryColors: [0xff00ff, 0x00ff00, 0x00ffff], fogColor: 0x1f0033, bodyBg: '#000010' };
             document.body.style.backgroundColor = astralBiome.bodyBg;
             ground.material.color.setHex(astralBiome.groundColor);
             scene.fog.color.setHex(astralBiome.fogColor);
-
-            obstacles.forEach(obs => {
-                if (obs.userData.type !== 'fud' && obs.material.color) {
-                    obs.material.color.setHex(astralBiome.obstacleColor);
-                }
-            });
-            scenery.forEach(scen => {
-                scen.traverse(child => {
-                    if (child.isMesh && child.material.color) {
-                        child.material.color.setHex(astralBiome.sceneryColors[Math.floor(Math.random() * astralBiome.sceneryColors.length)]);
-                    }
-                });
-            });
-
+            obstacles.forEach(obs => { if (obs.userData.type !== 'fud' && obs.material.color) obs.material.color.setHex(astralBiome.obstacleColor); });
+            scenery.forEach(scen => { scen.traverse(child => { if (child.isMesh && child.material.color) child.material.color.setHex(astralBiome.sceneryColors[Math.floor(Math.random() * astralBiome.sceneryColors.length)]); }); });
+            
             ui.bossOverlay.classList.remove('hidden');
             ui.bossOverlay.style.opacity = '1';
-            
-            bossAttackSequence = [
-                { time: 2, action: triggerLaserAttack }, { time: 8, action: triggerBlockadeAttack },
-                { time: 14, action: triggerInversionAttack }, { time: 20, action: triggerLaserAttack },
-                { time: 26, action: triggerBlockadeAttack },
-            ];
+            bossAttackSequence = [ { time: 2, action: triggerLaserAttack }, { time: 8, action: triggerBlockadeAttack }, { time: 14, action: triggerInversionAttack }, { time: 20, action: triggerLaserAttack }, { time: 26, action: triggerBlockadeAttack }, ];
         }
 
         function runBossLogic(deltaTime) {
@@ -758,35 +754,21 @@
             
             coinsCollected += 20;
             sounds.powerup.play();
-
-            // MODIFICATION: Restore original biome colors
-            if (originalBiomeBeforeBoss) {
-                document.body.style.backgroundColor = originalBiomeBeforeBoss.bodyBg;
-                ground.material.color.setHex(originalBiomeBeforeBoss.groundColor);
-                scene.fog.color.setHex(originalBiomeBeforeBoss.fogColor);
-
-                obstacles.forEach(obs => {
-                    if (obs.userData.type !== 'fud' && obs.material.color) {
-                        obs.material.color.setHex(originalBiomeBeforeBoss.obstacleColor);
-                    }
-                });
-                // Recolor scenery based on the current active biome, as it might be random
-                scenery.forEach(scen => {
-                    let color;
-                    if (activeBiomeKey === 'moonZone') color = Math.random() < 0.5 ? 0x00ff00 : 0xff0000;
-                    else if (activeBiomeKey === 'iceZone') color = 0x0000FF;
-                    else color = (BIOMES[activeBiomeKey] === BIOMES.normal) ? (Math.random() > 0.5 ? 0x00ff00 : 0xff0000) : BIOMES[activeBiomeKey].sceneryColor;
-                    
-                    scen.traverse(child => {
-                        if (child.isMesh && child.material.color) {
-                            child.material.color.setHex(color);
-                        }
-                    });
-                });
-
-                originalBiomeBeforeBoss = null; // Reset stored colors
-            }
             
+            biomeScoreOffset = score;
+            nextBossScore = score + 100000;
+
+            activeBiomeKey = 'normal';
+            setBiome(BIOMES.normal); 
+            
+            scenery.forEach(scen => {
+                const color = Math.random() > 0.5 ? 0x00ff00 : 0xff0000;
+                scen.traverse(child => {
+                    if (child.isMesh && child.material.color) child.material.color.setHex(color);
+                });
+            });
+
+            originalBiomeBeforeBoss = null; 
             laserWarningContainer.innerHTML = '';
             activeLaserLanes = [];
         }
@@ -795,47 +777,19 @@
             if (!isBossActive) return;
             const lanesToAttack = Math.random() < 0.5 ? 1 : 2;
             let availableLanes = [0, 1, 2];
-
             for (let i = 0; i < lanesToAttack; i++) {
                 const laneIndex = Math.floor(Math.random() * availableLanes.length);
                 const chosenLane = availableLanes.splice(laneIndex, 1)[0];
-
                 const warningDiv = document.createElement('div');
                 warningDiv.className = `laser-warning lane-${chosenLane} warning`;
                 laserWarningContainer.appendChild(warningDiv);
-
-                setTimeout(() => {
-                    warningDiv.classList.remove('warning');
-                    warningDiv.classList.add('active');
-                    activeLaserLanes.push(chosenLane);
-                }, 2000);
-
-                setTimeout(() => {
-                    if (warningDiv.parentElement) laserWarningContainer.removeChild(warningDiv);
-                    const index = activeLaserLanes.indexOf(chosenLane);
-                    if (index > -1) activeLaserLanes.splice(index, 1);
-                }, 4000); 
+                setTimeout(() => { warningDiv.classList.remove('warning'); warningDiv.classList.add('active'); activeLaserLanes.push(chosenLane); }, 2000);
+                setTimeout(() => { if (warningDiv.parentElement) laserWarningContainer.removeChild(warningDiv); const index = activeLaserLanes.indexOf(chosenLane); if (index > -1) activeLaserLanes.splice(index, 1); }, 4000); 
             }
         }
 
-        function triggerBlockadeAttack() {
-            if (!isBossActive) return;
-            const zPos = hero.position.z - 30;
-            createObstacle('fud', 0, zPos, false);
-            createObstacle('fud', 1, zPos, false);
-            createObstacle('fud', 2, zPos, false);
-        }
-
-        function triggerInversionAttack() {
-            if (!isBossActive) return;
-            controlsInverted = true;
-            document.body.style.filter = 'invert(1)';
-            sounds.gameOver.play();
-            setTimeout(() => {
-                controlsInverted = false;
-                document.body.style.filter = 'none';
-            }, 5000);
-        }
+        function triggerBlockadeAttack() { if (!isBossActive) return; const zPos = hero.position.z - 30; createObstacle('fud', 0, zPos, false); createObstacle('fud', 1, zPos, false); createObstacle('fud', 2, zPos, false); }
+        function triggerInversionAttack() { if (!isBossActive) return; controlsInverted = true; document.body.style.filter = 'invert(1)'; sounds.gameOver.play(); setTimeout(() => { controlsInverted = false; document.body.style.filter = 'none'; }, 5000); }
         
         // --- MAIN ANIMATION LOOP ---
         function animate() {
@@ -844,6 +798,14 @@
             requestAnimationFrame(animate);
             if (mixer) mixer.update(deltaTime);
             if (!gameStarted || !hero) { renderer.render(scene, camera); return; }
+
+            const currentSpeed = gameSpeed * speedBoost;
+            const zMovement = currentSpeed * 60 * deltaTime;
+
+            lastZ += zMovement;
+            while (lastZ > -150) {
+                spawnNextChallenge();
+            }
 
             if (score >= nextBossScore && !isBossActive) {
                 startBossBattle();
@@ -858,32 +820,23 @@
                 ui.trollEnergyBar.style.width = `${(trollEnergy / CONFIG.trollEnergyMax) * 100}%`;
             }
 
-            const currentSpeed = gameSpeed * speedBoost;
             if(!isBossActive) score += Math.floor(currentSpeed * 20);
             if (gameSpeed < CONFIG.maxSpeed) gameSpeed += CONFIG.speedUpFactor;
             
             if (!isBossActive) {
                 let nextBiomeKey;
-                if (score > 75000) { nextBiomeKey = 'moonZone'; }
-                else if (score > 50000) { nextBiomeKey = 'iceZone'; }
-                else if (score > 25000) { nextBiomeKey = 'dipZone'; }
+                if (score > 75000 + biomeScoreOffset) { nextBiomeKey = 'moonZone'; }
+                else if (score > 50000 + biomeScoreOffset) { nextBiomeKey = 'iceZone'; }
+                else if (score > 25000 + biomeScoreOffset) { nextBiomeKey = 'dipZone'; }
                 else { nextBiomeKey = 'normal'; }
 
                 if (nextBiomeKey !== activeBiomeKey) {
                     activeBiomeKey = nextBiomeKey;
                     setBiome(BIOMES[activeBiomeKey]);
-
-                    const biomeInfo = {
-                        dipZone: { title: "Eat the Dep", color: "#ff0000" },
-                        iceZone: { title: "Frozen Market", color: "#9ACEEB" },
-                        moonZone: { title: "To the Moon", color: "#C0C0C0" }
-                    };
-
+                    const biomeInfo = { dipZone: { title: "Eat the Dep", color: "#ff0000" }, iceZone: { title: "Frozen Market", color: "#9ACEEB" }, moonZone: { title: "To the Moon", color: "#C0C0C0" } };
                     if (biomeInfo[activeBiomeKey]) {
                         const info = biomeInfo[activeBiomeKey];
-                        ui.biomeModal.innerText = info.title;
-                        ui.biomeModal.style.color = info.color;
-                        ui.biomeModal.style.borderColor = info.color;
+                        ui.biomeModal.innerText = info.title; ui.biomeModal.style.color = info.color; ui.biomeModal.style.borderColor = info.color;
                         ui.biomeModal.classList.remove('hidden');
                         setTimeout(() => ui.biomeModal.classList.add('hidden'), 3000);
                     }
@@ -936,8 +889,29 @@
                     if (obs.userData.type === 'fud' && isTrolling) {
                         sounds.trollSmash.currentTime = 0;
                         sounds.trollSmash.play();
+                        
+                        for (let i = 0; i < 12; i++) {
+                            const pieceSize = Math.random() * 0.4 + 0.2;
+                            const piece = new THREE.Mesh(new THREE.BoxGeometry(pieceSize, pieceSize, pieceSize), fudMaterial.clone());
+                            piece.position.copy(obs.position).add(new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5));
+                            
+                            // --- MODIFICATION START ---
+                            // Define velocities for a more controlled explosion effect
+                            const sidewaysVelocity = (Math.random() - 0.5) * 12; // Increased sideways spread
+                            const upwardVelocity = Math.random() * 8 + 3;       // Strong upward pop
+                            const backwardVelocity = Math.random() * 10 + 5;      // ALWAYS positive Z velocity (towards the player)
+                            
+                            piece.userData.velocity = new THREE.Vector3(sidewaysVelocity, upwardVelocity, backwardVelocity);
+                            // --- MODIFICATION END ---
+                            
+                            piece.userData.lifetime = Math.random() * 1.5 + 0.5;
+                            scene.add(piece);
+                            debris.push(piece);
+                        }
+
                         scene.remove(obs);
                         obstacles.splice(index, 1);
+
                     } else if (!obs.userData.isFake && !invincibility) { 
                         if ( ((obs.userData.type === 'rage' || obs.userData.type === 'forever-alone' || obs.userData.type === 'crater') && !isJumping) || 
                              ((obs.userData.type === 'bar' || obs.userData.type === 'icicle') && !isSliding) || 
@@ -981,16 +955,27 @@
                     }
                 }
             });
+            
+            debris.forEach((piece, index) => {
+                piece.position.x += piece.userData.velocity.x * deltaTime;
+                piece.position.y += piece.userData.velocity.y * deltaTime;
+                piece.position.z += (piece.userData.velocity.z * deltaTime) + zMovement;
+                piece.userData.velocity.y -= 15 * deltaTime;
+                piece.userData.lifetime -= deltaTime;
+                if (piece.userData.lifetime <= 0) {
+                    scene.remove(piece);
+                    debris.splice(index, 1);
+                }
+            });
 
             [...obstacles, ...powerUps, ...scenery].forEach(obj => {
-                obj.position.z += currentSpeed * 60 * deltaTime;
+                obj.position.z += zMovement;
                 if (obstacles.includes(obj)) { if (obj.userData.isShifter && !obj.userData.hasShifted && obj.position.z > hero.position.z - 30) { const ci = CONFIG.lanes.indexOf(obj.userData.targetX); let ni = (ci + (Math.random() < 0.5 ? 1 : -1) + 3) % 3; obj.userData.targetX = CONFIG.lanes[ni]; obj.userData.hasShifted = true; } obj.position.x = THREE.MathUtils.lerp(obj.position.x, obj.userData.targetX, 0.05); }
                 if (obj.position.z > camera.position.z + 10) { 
-                    if (!isBossActive && (obstacles.includes(obj) || powerUps.includes(obj))) { 
+                    if (obstacles.includes(obj) || powerUps.includes(obj)) { 
                         scene.remove(obj); 
                         if (obstacles.includes(obj)) obstacles.splice(obstacles.indexOf(obj), 1); 
                         else powerUps.splice(powerUps.indexOf(obj), 1); 
-                        spawnNextChallenge(); 
                     } else if (scenery.includes(obj)) { 
                         scene.remove(obj); 
                         scenery.splice(scenery.indexOf(obj), 1); 
