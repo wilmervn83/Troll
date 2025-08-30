@@ -131,7 +131,7 @@
             z-index: 10;
         }
         #troll-logo-container span { font-size: 22px; color: #228B22; text-shadow: 2px 2px 0px black; margin-right: 8px; }
-        #troll-logo-container img { width: 40px; height: 40px; background: white; border-radius: 5px; }
+        #troll-logo-container img { width: 40px; height: 40px; }
         
         /* Sound Controls Styling */
         #sound-controls {
@@ -406,16 +406,21 @@
         const gameContainer = document.getElementById('game-container');
         gameContainer.appendChild(renderer.domElement);
         const clock = new THREE.Clock();
+        
+        // --- PARTICLE & BACKGROUND SYSTEM ---
+        let particles = [];
+        const PARTICLE_CONFIG = { dustColor: 0xAAAAAA, shockwaveColor: 0xFFFF00, };
+        let starField, dipZoneCandles = [], bossDome = null;
 
         // --- SCENE & BIOMES ---
         scene.add(new THREE.HemisphereLight(0xfffafa, 0x000000, 0.9));
         const sun = new THREE.DirectionalLight(0xffffff, 0.8);
         sun.position.set(2, 5, 3); sun.castShadow = true; scene.add(sun);
         const BIOMES = {
-            normal: { groundColor: 0x228B22, obstacleColor: 0xff0000, sceneryColor: 0x00ff00, fogColor: 0x88ff88, bodyBg: '#f0fff0' },
-            dipZone: { groundColor: 0xff0000, obstacleColor: 0x00ff00, sceneryColor: 0x00ff00, fogColor: 0x100000, bodyBg: '#000000' },
-            iceZone: { groundColor: 0x9ACEEB, obstacleColor: 0xFFFFFF, sceneryColor: 0x0000FF, fogColor: 0xE0FFFF, bodyBg: '#E0FFFF' },
-            moonZone: { groundColor: 0x808080, obstacleColor: 0xC0C0C0, sceneryColor: 0, fogColor: 0x000010, bodyBg: '#000010' }
+            normal: { groundColor: 0x228B22, obstacleColor: 0xff0000, sceneryColor: 0x00ff00, fogColor: 0x88ff88 },
+            dipZone: { groundColor: 0xff0000, obstacleColor: 0x00ff00, sceneryColor: 0x00ff00, fogColor: 0x100000 },
+            iceZone: { groundColor: 0x9ACEEB, obstacleColor: 0xFFFFFF, sceneryColor: 0x0000FF, fogColor: 0xE0FFFF },
+            moonZone: { groundColor: 0x808080, obstacleColor: 0xC0C0C0, sceneryColor: 0, fogColor: 0x000010 }
         };
         let currentBiome = BIOMES.normal;
         let activeBiomeKey = 'normal';
@@ -480,6 +485,94 @@
                 scene.add(hero);
             });
         }
+        
+        // --- VISUAL EFFECTS FUNCTIONS ---
+        function createParticles(type, position) {
+            if (type === 'slide') {
+                for (let i = 0; i < 3; i++) {
+                    const pMaterial = new THREE.MeshBasicMaterial({ color: PARTICLE_CONFIG.dustColor, transparent: true, opacity: 0.7 });
+                    const pGeometry = new THREE.PlaneGeometry(0.1, 0.1);
+                    const particle = new THREE.Mesh(pGeometry, pMaterial);
+                    particle.position.copy(position);
+                    particle.position.y = 0.1;
+                    particle.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 1.5, Math.random() * 0.5 + 0.2, gameSpeed * 10);
+                    particle.userData.lifetime = Math.random() * 0.5 + 0.2;
+                    scene.add(particle);
+                    particles.push(particle);
+                }
+            } else if (type === 'land') {
+                const shockwaveMaterial = new THREE.MeshBasicMaterial({ color: PARTICLE_CONFIG.shockwaveColor, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+                const shockwaveGeometry = new THREE.RingGeometry(0.1, 0.2, 32);
+                const shockwave = new THREE.Mesh(shockwaveGeometry, shockwaveMaterial);
+                shockwave.position.copy(position);
+                shockwave.position.y = 0.05;
+                shockwave.rotation.x = -Math.PI / 2;
+                shockwave.userData.lifetime = 0.5;
+                shockwave.userData.isShockwave = true;
+                scene.add(shockwave);
+                particles.push(shockwave);
+            }
+        }
+
+        function setupBackgrounds() {
+            // Stars for "To The Moon"
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                const x = THREE.MathUtils.randFloatSpread(400);
+                const y = THREE.MathUtils.randFloatSpread(400);
+                const z = THREE.MathUtils.randFloatSpread(400);
+                if (new THREE.Vector3(x, y, z).length() > 50) { starVertices.push(x, y, z); }
+            }
+            const starGeometry = new THREE.BufferGeometry();
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            starField = new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xffffff, size: 0.5 })); // Increased size
+            starField.visible = false;
+            scene.add(starField);
+
+            // Dome for Boss Battle
+            const domeGeo = new THREE.SphereGeometry(150, 32, 16);
+            const domeMat = new THREE.MeshBasicMaterial({
+                color: 0x39FF14, // Neon Green
+                wireframe: true,
+                side: THREE.BackSide
+            });
+            bossDome = new THREE.Mesh(domeGeo, domeMat);
+            bossDome.visible = false;
+            scene.add(bossDome);
+        }
+
+        function updateBackground(biomeKey) {
+            starField.visible = false;
+            if (bossDome) bossDome.visible = false;
+            dipZoneCandles.forEach(c => c.visible = false);
+            scene.background = null; 
+            
+            switch (biomeKey) {
+                case 'normal':
+                    // Blue to white gradient
+                    document.body.style.background = 'linear-gradient(to bottom, #87CEEB 8%, #FFFFFF 100%)';
+                    break;
+                case 'dipZone':
+                    document.body.style.background = '#1a0000';
+                    while (dipZoneCandles.length < 50) {
+                        const candle = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4, 0.5), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+                        candle.position.set((Math.random() - 0.5) * 50, Math.random() * 50 + 10, -10 - Math.random() * 150);
+                        scene.add(candle);
+                        dipZoneCandles.push(candle);
+                    }
+                    dipZoneCandles.forEach(c => c.visible = true);
+                    break;
+                case 'moonZone':
+                    document.body.style.background = '#000010';
+                    starField.visible = true;
+                    break;
+                case 'boss':
+                    document.body.style.background = '#000000';
+                    if (bossDome) bossDome.visible = true;
+                    break;
+            }
+        }
+
 
         // --- AUDIO SYSTEM & GAME VARIABLES ---
         const sounds = { 
@@ -537,6 +630,8 @@
             sounds.introMusic.pause(); 
             sounds.introMusic.currentTime = 0; 
             sounds.gameMusic.play(); 
+            setupBackgrounds();
+            setBiome(BIOMES.normal, 'normal'); // Set initial biome background correctly
             populateInitialTrack(); 
             animate(); 
         }
@@ -549,7 +644,6 @@
             ui.gameOver.classList.add('hidden');
             score = 0; coinsCollected = 0; speedBoost = 1; invincibility = false; controlsInverted = false; document.body.style.filter = 'none';
             trollEnergy = CONFIG.trollEnergyMax;
-            activeBiomeKey = 'normal';
             gameSpeed = CONFIG.startSpeed; lastZ = -25;
             biomeScoreOffset = 0;
             
@@ -561,8 +655,8 @@
             if(originalBiomeBeforeBoss) endBossBattle(); 
 
             nextBossScore = 100000;
-            [...obstacles, ...powerUps, ...scenery, ...debris].forEach(obj => scene.remove(obj));
-            obstacles = []; powerUps = []; scenery = []; debris = [];
+            [...obstacles, ...powerUps, ...scenery, ...debris, ...particles].forEach(obj => scene.remove(obj));
+            obstacles = []; powerUps = []; scenery = []; debris = []; particles = [];
             
             ui.coinIcon.style.transform = 'scale(1)';
 
@@ -575,7 +669,8 @@
             }
             headOverlay.classList.remove('hidden');
             currentLane = 1;
-            setBiome(BIOMES.normal);
+            activeBiomeKey = 'normal';
+            setBiome(BIOMES.normal, 'normal');
             populateInitialTrack();
             sounds.gameMusic.play();
             if(!gameOver) animate();
@@ -614,17 +709,19 @@
         
         function showMarketCapModal() { const highScore = localStorage.getItem('trollfaceHighScore') || 0; ui.currentHighScoreText.innerText = `Your highest MKT Cap is: ${highScore}`; ui.marketCapModal.classList.remove('hidden'); }
         function closeMarketCapModal() { ui.marketCapModal.classList.add('hidden'); }
-        function setBiome(biome) { 
-            currentBiome = biome; 
+        
+        function setBiome(biome, biomeKey) {
+            currentBiome = biome;
             laneChangeSpeed = (biome === BIOMES.iceZone) ? 0.10 : 0.25;
             currentJumpHeight = (biome === BIOMES.moonZone) ? CONFIG.jumpHeight * 1.5 : CONFIG.jumpHeight;
-            document.body.style.backgroundColor = biome.bodyBg; 
-            ground.material.color.setHex(biome.groundColor); 
-            scene.fog.color.setHex(biome.fogColor); 
-            obstacles.forEach(obs => { 
-                if (obs.userData.type !== 'fud') obs.material.color.setHex(currentBiome.obstacleColor) 
-            }); 
+            ground.material.color.setHex(biome.groundColor);
+            scene.fog.color.setHex(biome.fogColor);
+            obstacles.forEach(obs => {
+                if (obs.userData.type !== 'fud') obs.material.color.setHex(currentBiome.obstacleColor)
+            });
+            updateBackground(biomeKey);
         }
+
         function triggerTrollLaughEvent() { ui.trollLaughOverlay.classList.remove('hidden'); ui.trollLaughOverlay.style.opacity = '1'; sounds.jump.currentTime = 0; sounds.jump.play(); setTimeout(() => { ui.trollLaughOverlay.style.opacity = '0'; setTimeout(() => ui.trollLaughOverlay.classList.add('hidden'), 200); }, 300); }
         function populateInitialTrack() { for (let i = 0; i < 40; i++) spawnNextChallenge(); for (let i = 0; i < 100; i++) addBiomeScenery(); }
         function spawnNextChallenge() { const c = Math.random(); if (c < 0.5) createObstacle(); else if (c < 0.8) createPowerUp('coin'); else if (c < 0.88) createSequence(); else if (c < 0.94) createPowerUp(Math.random() < 0.5 ? 'shield' : 'speed'); else if (c < 0.98) createPowerUp('fake_powerup'); else createFakeWallChallenge(); }
@@ -667,7 +764,7 @@
             if (finalType === 'coin') {
                 powerUp = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), coinMaterial);
             } else { 
-                const colors = { shield: 0x00ff00, speed: 0xff00ff }; 
+                const colors = { shield: 0x27F2F5, speed: 0xff00ff }; 
                 powerUp = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 0), new THREE.MeshStandardMaterial({ color: colors[finalType], emissive: colors[finalType] })); 
             }
             const lane = forceLane != null ? forceLane : Math.floor(Math.random() * 3);
@@ -719,14 +816,14 @@
             originalBiomeBeforeBoss = {
                 groundColor: ground.material.color.getHex(),
                 fogColor: scene.fog.color.getHex(),
-                bodyBg: document.body.style.backgroundColor,
                 obstacleColor: currentBiome.obstacleColor
             };
 
-            const astralBiome = { groundColor: 0x4a00e0, obstacleColor: 0x00ffff, sceneryColors: [0xff00ff, 0x00ff00, 0x00ffff], fogColor: 0x1f0033, bodyBg: '#000010' };
-            document.body.style.backgroundColor = astralBiome.bodyBg;
-            ground.material.color.setHex(astralBiome.groundColor);
-            scene.fog.color.setHex(astralBiome.fogColor);
+            const astralBiome = { obstacleColor: 0x00ffff, sceneryColors: [0xff00ff, 0x00ff00, 0x00ffff] };
+            updateBackground('boss');
+            
+            ground.material.color.setHex(0x9400D3); // Neon Violet
+            
             obstacles.forEach(obs => { if (obs.userData.type !== 'fud' && obs.material.color) obs.material.color.setHex(astralBiome.obstacleColor); });
             scenery.forEach(scen => { scen.traverse(child => { if (child.isMesh && child.material.color) child.material.color.setHex(astralBiome.sceneryColors[Math.floor(Math.random() * astralBiome.sceneryColors.length)]); }); });
             
@@ -757,9 +854,13 @@
             
             biomeScoreOffset = score;
             nextBossScore = score + 100000;
-
+            
+            originalBiomeBeforeBoss = null; 
+            laserWarningContainer.innerHTML = '';
+            activeLaserLanes = [];
+            
             activeBiomeKey = 'normal';
-            setBiome(BIOMES.normal); 
+            setBiome(BIOMES.normal, 'normal'); 
             
             scenery.forEach(scen => {
                 const color = Math.random() > 0.5 ? 0x00ff00 : 0xff0000;
@@ -767,10 +868,6 @@
                     if (child.isMesh && child.material.color) child.material.color.setHex(color);
                 });
             });
-
-            originalBiomeBeforeBoss = null; 
-            laserWarningContainer.innerHTML = '';
-            activeLaserLanes = [];
         }
 
         function triggerLaserAttack() {
@@ -802,6 +899,43 @@
             const currentSpeed = gameSpeed * speedBoost;
             const zMovement = currentSpeed * 60 * deltaTime;
 
+            // --- Particle Update Loop ---
+            particles.forEach((p, index) => {
+                p.userData.lifetime -= deltaTime;
+                if (p.userData.lifetime <= 0) {
+                    scene.remove(p);
+                    particles.splice(index, 1);
+                } else {
+                    if (p.userData.isShockwave) {
+                        const scale = 1 + (0.5 - p.userData.lifetime) * 5;
+                        p.scale.set(scale, scale, scale);
+                        p.material.opacity = p.userData.lifetime / 0.5;
+                    } else {
+                        p.position.add(p.userData.velocity.clone().multiplyScalar(deltaTime));
+                        p.position.z += zMovement;
+                        p.userData.velocity.y -= 5 * deltaTime;
+                        p.material.opacity = p.userData.lifetime / 0.7;
+                    }
+                }
+            });
+
+            // --- Background Animation ---
+            if (activeBiomeKey === 'dipZone') {
+                dipZoneCandles.forEach(c => {
+                    c.position.y -= 15 * deltaTime;
+                    if (c.position.y < -10) {
+                        c.position.y = 50;
+                        c.position.x = (Math.random() - 0.5) * 50;
+                        c.position.z = -10 - Math.random() * 150;
+                    }
+                });
+            }
+            if (isBossActive && bossDome) {
+                bossDome.position.copy(camera.position); // Make dome follow camera
+                bossDome.rotation.y += deltaTime * 0.05; // Slowly rotate dome
+            }
+
+
             lastZ += zMovement;
             while (lastZ > -150) {
                 spawnNextChallenge();
@@ -832,7 +966,7 @@
 
                 if (nextBiomeKey !== activeBiomeKey) {
                     activeBiomeKey = nextBiomeKey;
-                    setBiome(BIOMES[activeBiomeKey]);
+                    setBiome(BIOMES[activeBiomeKey], activeBiomeKey);
                     const biomeInfo = { dipZone: { title: "Eat the Dep", color: "#ff0000" }, iceZone: { title: "Frozen Market", color: "#9ACEEB" }, moonZone: { title: "To the Moon", color: "#C0C0C0" } };
                     if (biomeInfo[activeBiomeKey]) {
                         const info = biomeInfo[activeBiomeKey];
@@ -849,12 +983,18 @@
             if (isJumping) {
                 jumpTime += deltaTime * 5;
                 hero.position.y = Math.sin(jumpTime) * currentJumpHeight;
-                if (jumpTime >= CONFIG.jumpDuration) { isJumping = false; hero.position.y = 0; headOverlay.src = trollTextures.running; }
+                if (jumpTime >= CONFIG.jumpDuration) { 
+                    isJumping = false; 
+                    hero.position.y = 0; 
+                    headOverlay.src = trollTextures.running;
+                    createParticles('land', hero.position);
+                }
             }
             if (isSliding) {
                 slideTime++;
                 hero.scale.y = 0.8;
                 hero.position.y = -0.6;
+                if (Math.random() < 0.4) createParticles('slide', hero.position);
                 if (slideTime > CONFIG.slideDuration) { isSliding = false; hero.scale.set(1.2, 1.2, 1.2); hero.position.y = 0;}
             }
             
@@ -895,14 +1035,10 @@
                             const piece = new THREE.Mesh(new THREE.BoxGeometry(pieceSize, pieceSize, pieceSize), fudMaterial.clone());
                             piece.position.copy(obs.position).add(new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5));
                             
-                            // --- MODIFICATION START ---
-                            // Define velocities for a more controlled explosion effect
-                            const sidewaysVelocity = (Math.random() - 0.5) * 12; // Increased sideways spread
-                            const upwardVelocity = Math.random() * 8 + 3;       // Strong upward pop
-                            const backwardVelocity = Math.random() * 10 + 5;      // ALWAYS positive Z velocity (towards the player)
-                            
+                            const sidewaysVelocity = (Math.random() - 0.5) * 12;
+                            const upwardVelocity = Math.random() * 8 + 3;
+                            const backwardVelocity = Math.random() * 10 + 5;
                             piece.userData.velocity = new THREE.Vector3(sidewaysVelocity, upwardVelocity, backwardVelocity);
-                            // --- MODIFICATION END ---
                             
                             piece.userData.lifetime = Math.random() * 1.5 + 0.5;
                             scene.add(piece);
