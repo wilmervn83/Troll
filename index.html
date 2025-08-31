@@ -432,7 +432,7 @@
         ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
         scene.fog = new THREE.FogExp2(currentBiome.fogColor, 0.015);
 
-        // --- HERO (TROLLFACE) ---
+        // --- HERO, TEXTURES & MATERIALS ---
         let hero;
         let mixer;
         const trollfaceURLs = {
@@ -446,6 +446,45 @@
         const coinTexture = textureLoader.load('images/Coin.png');
         const coinMaterial = new THREE.MeshBasicMaterial({ map: coinTexture, transparent: true });
         
+        // Función para configurar la repetición de texturas
+        function setupRepeatingTexture(texture, repeatX, repeatY) {
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(repeatX, repeatY);
+        }
+
+        // Texturas para el SUELO DEL BIOMA NORMAL
+        const normalColorTexture = textureLoader.load('texturas/normal_suelo/normal_color.png');
+        const normalRoughnessTexture = textureLoader.load('texturas/normal_suelo/normal_roughness.png');
+        setupRepeatingTexture(normalColorTexture, 6, 250);
+        setupRepeatingTexture(normalRoughnessTexture, 6, 250);
+        
+        // === NUEVO: Carga de texturas PBR para el suelo de MOON ZONE ===
+        const moonColorTexture = textureLoader.load('texturas/moon_suelo/moon_color.jpg');
+        const moonRoughnessTexture = textureLoader.load('texturas/moon_suelo/color_roughness.png');
+        setupRepeatingTexture(moonColorTexture, 4, 200);
+        setupRepeatingTexture(moonRoughnessTexture, 4, 200);
+
+        // Creación del material PBR para el bioma normal
+        const normalGroundMaterial = new THREE.MeshStandardMaterial({
+            map: normalColorTexture,
+            roughnessMap: normalRoughnessTexture,
+        });
+        
+        // === NUEVO: Creación del material PBR para la luna ===
+        const moonGroundMaterial = new THREE.MeshStandardMaterial({
+            map: moonColorTexture,
+            roughnessMap: moonRoughnessTexture,
+        });
+
+        // === MODIFICADO: Objeto centralizado para gestionar los materiales del suelo ===
+        const biomeMaterials = {
+            normal: normalGroundMaterial,
+            dipZone: new THREE.MeshStandardMaterial({ color: BIOMES.dipZone.groundColor }),
+            iceZone: new THREE.MeshStandardMaterial({ color: BIOMES.iceZone.groundColor }),
+            moonZone: moonGroundMaterial,
+        };
+
         const headOverlay = document.getElementById('trollface-head-overlay');
         const bubbleOverlay = document.getElementById('thought-bubble-overlay');
         const laserWarningContainer = document.getElementById('laser-warnings-container');
@@ -731,7 +770,13 @@
             currentBiome = biome;
             laneChangeSpeed = (biome === BIOMES.iceZone) ? 0.10 : 0.25;
             currentJumpHeight = (biome === BIOMES.moonZone) ? CONFIG.jumpHeight * 1.5 : CONFIG.jumpHeight;
-            ground.material.color.setHex(biome.groundColor);
+            
+            // Asigna el material completo desde nuestro objeto centralizado
+            if (biomeMaterials[biomeKey]) {
+                ground.material = biomeMaterials[biomeKey];
+                ground.material.needsUpdate = true;
+            }
+
             scene.fog.color.setHex(biome.fogColor);
             obstacles.forEach(obs => {
                 if (obs.userData.type !== 'fud' && obs.userData.type !== 'rage' && obs.userData.type !== 'forever-alone') {
@@ -855,7 +900,7 @@
             const astralBiome = { obstacleColor: 0x00ffff, sceneryColors: [0xff00ff, 0x00ff00, 0x00ffff] };
             updateBackground('boss');
             
-            ground.material.color.setHex(0x9400D3); // Neon Violet
+            ground.material = new THREE.MeshStandardMaterial({color: 0x9400D3}); // Neon Violet
             
             obstacles.forEach(obs => { if (obs.userData.type !== 'fud' && obs.material.color) obs.material.color.setHex(astralBiome.obstacleColor); });
             scenery.forEach(scen => { scen.traverse(child => { if (child.isMesh && child.material.color) child.material.color.setHex(astralBiome.sceneryColors[Math.floor(Math.random() * astralBiome.sceneryColors.length)]); }); });
