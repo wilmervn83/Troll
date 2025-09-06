@@ -695,7 +695,7 @@
             document.body.classList.remove('shake');
             gameOver = false;
             ui.gameOver.classList.add('hidden');
-            score = 0; coinsCollected = 0; speedBoost = 1; invincibility = false; controlsInverted = false; document.body.style.filter = 'none';
+            score = 47000; coinsCollected = 0; speedBoost = 1; invincibility = false; controlsInverted = false; document.body.style.filter = 'none';
             trollEnergy = CONFIG.trollEnergyMax;
             gameSpeed = CONFIG.startSpeed; lastZ = -25;
             biomeScoreOffset = 0;
@@ -1046,7 +1046,7 @@
                 if (nextBiomeKey !== activeBiomeKey) {
                     activeBiomeKey = nextBiomeKey;
                     setBiome(BIOMES[activeBiomeKey], activeBiomeKey);
-                    const biomeInfo = { dipZone: { title: "Eat the Dep", color: "#ff0000" }, iceZone: { title: "Frozen Market", color: "#9ACEEB" }, moonZone: { title: "To the Moon", color: "#C0C0C0" } };
+                    const biomeInfo = { dipZone: { title: "Eat the Dip", color: "#ff0000" }, iceZone: { title: "Frozen Market", color: "#9ACEEB" }, moonZone: { title: "To the Moon", color: "#C0C0C0" } };
                     if (biomeInfo[activeBiomeKey]) {
                         const info = biomeInfo[activeBiomeKey];
                         ui.biomeModal.innerText = info.title; ui.biomeModal.style.color = info.color; ui.biomeModal.style.borderColor = info.color;
